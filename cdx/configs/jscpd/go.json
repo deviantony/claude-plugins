@@ -1,0 +1,13 @@
+{
+  "threshold": 5,
+  "minLines": 20,
+  "minTokens": 100,
+  "reporters": ["console"],
+  "format": ["go"],
+  "ignore": [
+    "vendor/**",
+    "**/*_test.go",
+    "**/*.pb.go",
+    "**/testdata/**"
+  ]
+}

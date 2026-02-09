@@ -1,0 +1,9 @@
+{
+  "name": "cdx",
+  "version": "1.0.0",
+  "description": "Claude Developer Experience — setup wizard and code review tools for Claude Code projects",
+  "author": {
+    "name": "claude-plugins"
+  },
+  "homepage": "https://github.com/claude-plugins/claude-plugins"
+}
