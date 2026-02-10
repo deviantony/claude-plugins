@@ -4,11 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-A collection of Claude Code plugins. Currently contains one plugin: **cdx** (Claude Developer Experience) — a setup wizard and code review toolchain for bootstrapping any project with Claude Code.
+A Claude Code **plugin marketplace** (`deviantony-plugins`). Each plugin lives in its own top-level directory (e.g., `cdx/`) with a `.claude-plugin/plugin.json` manifest. The marketplace catalog is at `.claude-plugin/marketplace.json`.
+
+Users add this marketplace with:
+```
+/plugin marketplace add deviantony/claude-plugins
+```
 
 ## Repository Layout
 
-This is a **plugin monorepo**. Each plugin lives in its own top-level directory (e.g., `cdx/`) with a `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
+This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.json` lists all available plugins. Each plugin lives in its own top-level directory with its own `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
 
 The cdx plugin has two skills:
 - `skills/setup/SKILL.md` → `/cdx:setup` — interactive 6-step wizard (stack detection → git init → LSP plugins → simplifier agents → jscpd → summary)
@@ -29,6 +34,7 @@ Reference data used by skills lives in `skills/<skill>/references/`. Starter con
 2. Add skills under `<plugin-name>/skills/<skill-name>/SKILL.md`
 3. Put reference data in `<plugin-name>/skills/<skill-name>/references/`
 4. Put shared configs in `<plugin-name>/configs/`
+5. Register the plugin in `.claude-plugin/marketplace.json` under the `plugins` array
 
 ## Adding a New Skill to cdx
 

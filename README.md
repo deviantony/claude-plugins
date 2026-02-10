@@ -1,6 +1,12 @@
 # claude-plugins
 
-A collection of Claude Code plugins.
+A Claude Code plugin marketplace (`deviantony-plugins`).
+
+## Add the marketplace
+
+```bash
+claude plugin marketplace add deviantony/claude-plugins
+```
 
 ## cdx — Claude Developer Experience
 
@@ -9,7 +15,7 @@ Setup wizard and code review tools for Claude Code projects. Eliminates repetiti
 ### Install
 
 ```bash
-claude plugin install cdx@claude-plugins
+claude plugin install cdx@deviantony-plugins
 ```
 
 ### Commands
@@ -54,3 +60,22 @@ cdx/
     └── jscpd/
         └── go.json                  # Go jscpd config
 ```
+
+## canon — Code Annotation Tool
+
+Browser-based annotation tool for Claude Code that lets you add line-specific feedback to any file, with annotations flowing back into your conversation as structured context.
+
+### Install
+
+```bash
+claude plugin install canon@deviantony-plugins
+```
+
+Then run `/canon:setup` to download the platform-specific binary.
+
+### Commands
+
+- `/canon:setup` — Install or update the Canon binary
+- `/canon:new` — Open an annotation session to review code changes
+
+Source: [deviantony/canon](https://github.com/deviantony/canon)
