@@ -13,6 +13,21 @@ user-invocable: true
 
 You are running the CDX setup wizard. Walk the user through each step interactively, using AskUserQuestion to confirm decisions before taking action. Be concise and actionable.
 
+## Step 0: CLAUDE.md Pre-requisite
+
+Before anything else, check if the project has a `CLAUDE.md` in the project root using Glob.
+
+**If CLAUDE.md is missing**: Stop the wizard and tell the user:
+
+> This wizard works best when it can read your project's CLAUDE.md for context.
+> Please run `/init` first — it scans your codebase and creates a CLAUDE.md with project description, tech stack notes, and build commands. The setup wizard uses this to make smarter decisions about what to configure.
+>
+> Once `/init` is done, run `/cdx:setup` again.
+
+Do not proceed to any further steps.
+
+**If CLAUDE.md exists**: Read it in full and carry the content forward as `CLAUDE_MD_CONTENT` — you will reference it in Step 1 and Step 6.
+
 ## Step 1: Tech Stack Detection
 
 Scan the project root for config files to detect the tech stack:
@@ -31,8 +46,11 @@ Scan the project root for config files to detect the tech stack:
 
 Use Glob to check for these files. Collect all detected languages.
 
-Present the detected stack to the user via AskUserQuestion:
-- "I detected the following tech stack: [list]. Is this correct?"
+Next, cross-reference with `CLAUDE_MD_CONTENT` (from Step 0). The `/init`-generated CLAUDE.md typically contains a project description, tech stack notes, and build commands. Look for mentions of languages, frameworks, or tools that glob-based detection may have missed (e.g., a monorepo where config files are in subdirectories, or a language used only for tooling/scripts).
+
+Present both sources to the user via AskUserQuestion:
+- "I detected the following tech stack from config files: [glob list]. CLAUDE.md also mentions: [any additional languages/frameworks found]. Combined stack: [merged list]. Is this correct?"
+- If CLAUDE.md didn't add anything new, just show the glob results
 - Options: "Yes, proceed" / "Let me adjust" (allow them to add/remove languages)
 
 Store the confirmed stack for all subsequent steps.
@@ -205,7 +223,59 @@ For each primary language in the confirmed tech stack, generate a tailored simpl
    d. Use AskUserQuestion to confirm or adjust the config before writing
    e. Write the config to `.jscpd-<language>.json` in the project root
 
-## Step 6: Summary
+## Step 6: Update CLAUDE.md and Create Language Rules
+
+Now update the project's CLAUDE.md and create language-specific rule files.
+
+1. **Read current state**: Read the project's `CLAUDE.md` again (it may have been modified by other steps).
+
+2. **Read best practices reference**: Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/claude-md-practices.md`.
+
+3. **Build the `## CDX Tools` section** from what was actually configured in previous steps. Only list items that were created — for example:
+
+   ```
+   ## CDX Tools
+
+   The following tools were configured by `/cdx:setup`:
+
+   - **Simplifier agents**: `.claude/agents/go-simplifier.md` — run via `/agents` to simplify code
+   - **LSP plugins**: `gopls` installed at project scope for Go intelligence
+   - **Duplication detection**: `.jscpd-go.json` — run `jscpd --config .jscpd-go.json .` to check for duplicates
+   - **Language rules**: `.claude/rules/cdx-go.md` — Go-specific conventions and commands
+   ```
+
+4. **Build the `## Best Practices` section** using only the `## Generic` block from the reference file. This section contains project-wide principles (YAGNI, early returns, single responsibility, etc.) that apply regardless of language.
+
+5. **Create language-specific rule files**: For each language in the confirmed stack, check if the reference file has a matching `## <Language>` section.
+   - **If it does**: Create `.claude/rules/cdx-<language>.md` (e.g., `.claude/rules/cdx-go.md`) with:
+     - YAML frontmatter containing a `paths` field scoped to that language's file extensions (e.g., `"**/*.go"` for Go)
+     - The language-specific content from the reference file (commands, conventions, file structure)
+   - **If the language has no entry in the reference**: Skip silently — no warning, no placeholder.
+   - Create the `.claude/rules/` directory if it doesn't exist.
+
+   Example `.claude/rules/cdx-go.md`:
+   ```
+   ---
+   paths:
+     - "**/*.go"
+   ---
+
+   # Go
+
+   Build and test commands:
+   ...
+
+   Conventions:
+   ...
+   ```
+
+6. **Handle re-runs**:
+   - If `## CDX Tools` or `## Best Practices` sections already exist in CLAUDE.md, replace them in place. Otherwise, append them at the end.
+   - If a `.claude/rules/cdx-<language>.md` file already exists, overwrite it.
+
+7. **Confirm before writing**: Present all proposed changes to the user via AskUserQuestion before writing anything. Show: the CLAUDE.md additions/replacements and the rule files that will be created.
+
+## Step 7: Summary
 
 Present a clear summary of everything that was set up:
 
@@ -227,6 +297,12 @@ Present a clear summary of everything that was set up:
 
 ### Duplication Detection
 - [list of jscpd configs created]
+
+### CLAUDE.md
+- [Updated with CDX Tools and Best Practices sections]
+
+### Language Rules
+- [list of .claude/rules/cdx-<language>.md files created]
 
 ### Manual Steps Needed
 - [any pending items, e.g., "Install gopls: `go install golang.org/x/tools/gopls@latest`"]

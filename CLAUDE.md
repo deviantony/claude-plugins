@@ -16,7 +16,7 @@ Users add this marketplace with:
 This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.json` lists all available plugins. Each plugin lives in its own top-level directory with its own `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
 
 The cdx plugin has two skills:
-- `skills/setup/SKILL.md` → `/cdx:setup` — interactive 6-step wizard (stack detection → git init → LSP plugins → simplifier agents → jscpd → summary)
+- `skills/setup/SKILL.md` → `/cdx:setup` — interactive 8-step wizard (CLAUDE.md check → stack detection → git init → LSP plugins → simplifier agents → jscpd → update CLAUDE.md → summary)
 - `skills/review/SKILL.md` → `/cdx:review` — code review workflow (diff detection → run simplifier + jscpd → present results → offer actions)
 
 Reference data used by skills lives in `skills/<skill>/references/`. Starter configs live in `configs/`.
@@ -47,3 +47,4 @@ Reference data used by skills lives in `skills/<skill>/references/`. Starter con
 - The simplifier template (`simplifier-template.md`) uses `{{LANGUAGE}}` and `{{LANGUAGE_STANDARDS}}` placeholders — the setup skill performs string replacement at generation time to produce project-specific agents written to `.claude/agents/`
 - jscpd configs are per-language (`.jscpd-<lang>.json`) rather than a single config, to allow language-specific thresholds and ignore patterns
 - The review skill runs simplifier and duplication checks in parallel via the Task tool, and initially reports findings read-only before offering to apply changes
+- Best practices come from `skills/setup/references/claude-md-practices.md`: the Generic section is written into the user's CLAUDE.md, while language-specific sections are written to path-scoped `.claude/rules/cdx-<lang>.md` files. To add support for a new language, add a `## <Language>` section (with a `Paths:` line) to this reference file.
