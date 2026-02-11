@@ -16,6 +16,7 @@ These apply to every project regardless of language — written into CLAUDE.md:
 - Prefer early returns over deeply nested conditionals
 - Single responsibility — each function/method should do one thing well
 - Keep it simple, don't over-engineer, YAGNI — only build what is needed now
+- Keep dependencies minimal — prefer standard library solutions over adding new packages
 - Favor consistency over cleverness and premature optimization
 - Write code that reads like prose — clear naming over comments explaining unclear code
 - These principles apply across planning, implementation, and review
