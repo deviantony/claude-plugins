@@ -21,7 +21,7 @@ If a CLAUDE.md file exists in the project root, follow any coding conventions or
 
 ## What to Simplify
 
-- Functions longer than 30 lines that can be broken into clear, named steps
+- Functions longer than 50 lines that can be broken into clear, named steps
 - Deeply nested conditionals (3+ levels) that can be flattened with early returns
 - Overly abstract patterns that add indirection without clear benefit
 - Redundant nil/null/error checks that duplicate framework guarantees
