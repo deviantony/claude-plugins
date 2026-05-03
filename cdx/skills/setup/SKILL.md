@@ -2,8 +2,8 @@
 name: setup
 description: |
   Interactive setup wizard to bootstrap any project for Claude Code development.
-  Auto-detects tech stacks, configures LSP plugins, generates tailored simplifier agents,
-  and sets up duplication detection via jscpd.
+  Auto-detects tech stacks, configures LSP plugins, sets up duplication detection
+  via jscpd, and writes language-specific rules and best practices to CLAUDE.md.
   Use when user says: "set up project for Claude", "initialize Claude Code",
   "bootstrap Claude dev environment", "cdx setup", or "configure Claude tools".
 user-invocable: true
@@ -26,7 +26,7 @@ Before anything else, check if the project has a `CLAUDE.md` in the project root
 
 Do not proceed to any further steps.
 
-**If CLAUDE.md exists**: Read it in full and carry the content forward as `CLAUDE_MD_CONTENT` — you will reference it in Step 1 and Step 6.
+**If CLAUDE.md exists**: Read it in full and carry the content forward as `CLAUDE_MD_CONTENT` — you will reference it in Step 1 and Step 5.
 
 ## Step 1: Tech Stack Detection
 
@@ -103,82 +103,7 @@ For each language in the confirmed tech stack that has an LSP plugin entry:
 
 After processing all languages, summarize which LSP plugins were installed and which need manual setup.
 
-## Step 4: Simplifier Agent Generation
-
-Read the base simplifier template from `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/simplifier-template.md`.
-
-For each primary language in the confirmed tech stack, generate a tailored simplifier agent:
-
-1. **Replace `{{LANGUAGE}}`** with the language name
-2. **Replace `{{LANGUAGE_STANDARDS}}`** with language-specific coding standards:
-
-   **Go**:
-   - Follow effective Go idioms and Go proverbs
-   - Use `fmt.Errorf` with `%w` for error wrapping
-   - Prefer table-driven tests
-   - Use short variable names in small scopes, descriptive names for exported identifiers
-   - Avoid `interface{}` / `any` when a concrete type works
-   - Handle errors explicitly — never use `_` to discard errors
-
-   **Python**:
-   - Follow PEP 8 style guidelines
-   - Use type hints for function signatures
-   - Prefer list/dict/set comprehensions over manual loops when clearer
-   - Use `pathlib.Path` over `os.path`
-   - Use context managers (`with`) for resource management
-   - Prefer `dataclasses` or `pydantic` over plain dicts for structured data
-
-   **TypeScript**:
-   - Use strict TypeScript — avoid `any` type
-   - Prefer `const` over `let`, never use `var`
-   - Use `interface` for object shapes, `type` for unions/intersections
-   - Prefer `async/await` over raw Promise chains
-   - Use optional chaining (`?.`) and nullish coalescing (`??`)
-   - Avoid `enum` — prefer const objects or union types
-
-   **Rust**:
-   - Follow Rust API Guidelines
-   - Use `?` operator for error propagation
-   - Prefer `impl Trait` over `dyn Trait` where possible
-   - Use pattern matching instead of if-else chains
-   - Leverage the type system — make invalid states unrepresentable
-   - Use `clippy` recommendations as guidance
-
-   **Java**:
-   - Follow Google Java Style Guide
-   - Use `var` for local variables when type is obvious
-   - Prefer streams and lambdas for collection processing
-   - Use `Optional` instead of null returns
-   - Prefer `record` types for data-only classes
-
-   **Ruby**:
-   - Follow Ruby Style Guide
-   - Use `frozen_string_literal` pragma
-   - Prefer `Symbol` over `String` for identifiers
-   - Use blocks and iterators over explicit loops
-
-   **C#**:
-   - Follow .NET coding conventions
-   - Use `var` for local variables when type is obvious
-   - Prefer LINQ for collection operations
-   - Use `async/await` pattern for async code
-   - Use records for immutable data types
-
-   **PHP**:
-   - Follow PSR-12 coding standard
-   - Use type declarations for parameters and returns
-   - Prefer named arguments for clarity
-   - Use null-safe operator (`?->`)
-
-   For other languages: generate reasonable defaults based on the language's community conventions.
-
-3. **Check for CLAUDE.md**: If the project has a CLAUDE.md, note in the agent template that it should reference project-specific standards from CLAUDE.md.
-
-4. **Write the agent** to `.claude/agents/<language>-simplifier.md` in the project root (create `.claude/agents/` if it doesn't exist).
-
-5. Use AskUserQuestion to confirm before writing each agent file.
-
-## Step 5: jscpd Setup
+## Step 4: jscpd Setup
 
 1. **Check if jscpd is installed**: Run `which jscpd` via Bash
 2. **If not installed**: Use AskUserQuestion — "jscpd is not installed. Install it via `npm install -g jscpd`?"
@@ -223,7 +148,7 @@ For each primary language in the confirmed tech stack, generate a tailored simpl
    d. Use AskUserQuestion to confirm or adjust the config before writing
    e. Write the config to `.jscpd-<language>.json` in the project root
 
-## Step 6: Update CLAUDE.md and Create Language Rules
+## Step 5: Update CLAUDE.md and Create Language Rules
 
 Now update the project's CLAUDE.md and create language-specific rule files.
 
@@ -238,7 +163,6 @@ Now update the project's CLAUDE.md and create language-specific rule files.
 
    The following tools were configured by `/cdx:setup`:
 
-   - **Simplifier agents**: `.claude/agents/go-simplifier.md` — run via `/agents` to simplify code
    - **LSP plugins**: `gopls` installed at project scope for Go intelligence
    - **Duplication detection**: `.jscpd-go.json` — run `jscpd --config .jscpd-go.json .` to check for duplicates
    - **Language rules**: `.claude/rules/cdx-go.md` — Go-specific conventions and commands
@@ -275,7 +199,7 @@ Now update the project's CLAUDE.md and create language-specific rule files.
 
 7. **Confirm before writing**: Present all proposed changes to the user via AskUserQuestion before writing anything. Show: the CLAUDE.md additions/replacements and the rule files that will be created.
 
-## Step 7: Summary
+## Step 6: Summary
 
 Present a clear summary of everything that was set up:
 
@@ -292,9 +216,6 @@ Present a clear summary of everything that was set up:
 ### LSP Plugins Installed
 - [list of installed plugins]
 
-### Simplifier Agents Created
-- [list of agent files created]
-
 ### Duplication Detection
 - [list of jscpd configs created]
 
@@ -308,4 +229,8 @@ Present a clear summary of everything that was set up:
 - [any pending items, e.g., "Install gopls: `go install golang.org/x/tools/gopls@latest`"]
 ```
 
-Inform the user they can now use `/cdx:review` to run code reviews on their project.
+Point the user at the other cdx skills they may want to use:
+- `/cdx:coderev` — comprehensive code review (correctness, reuse, conventions, efficiency, security)
+- `/cdx:safe-deps` — enforced safe dependency installation
+- `/cdx:web-security-audit` — deep web-app security audit
+- `/cdx:labctl` — DigitalOcean VM management

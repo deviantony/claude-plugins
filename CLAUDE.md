@@ -15,11 +15,14 @@ Users add this marketplace with:
 
 This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.json` lists all available plugins. Each plugin lives in its own top-level directory with its own `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
 
-The cdx plugin has two skills:
-- `skills/setup/SKILL.md` → `/cdx:setup` — interactive 8-step wizard (CLAUDE.md check → stack detection → git init → LSP plugins → simplifier agents → jscpd → update CLAUDE.md → summary)
-- `skills/review/SKILL.md` → `/cdx:review` — code review workflow (diff detection → run simplifier + jscpd → present results → offer actions)
+The cdx plugin has five skills:
+- `skills/setup/SKILL.md` → `/cdx:setup` — 7-step bootstrap wizard (CLAUDE.md check → stack detection → git init → LSP plugins → jscpd → update CLAUDE.md + language rules → summary)
+- `skills/coderev/SKILL.md` → `/cdx:coderev` — comprehensive code review (3 parallel agents covering correctness, reuse/conventions, efficiency/security; structured report; offers to fix)
+- `skills/safe-deps/SKILL.md` → `/cdx:safe-deps` — enforces pnpm/bun/uv with exact pinning, 10-day minimum release age, and disabled post-install scripts; bans npm/yarn/npx
+- `skills/web-security-audit/SKILL.md` → `/cdx:web-security-audit` — 7-phase web-app security audit (static + live), with per-class authorization gates and a timestamped output folder
+- `skills/labctl/SKILL.md` → `/cdx:labctl` — DigitalOcean VM management via the `labctl` CLI
 
-Reference data used by skills lives in `skills/<skill>/references/`. Starter configs live in `configs/`.
+Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live in `configs/`.
 
 ## Plugin Conventions
 
@@ -44,7 +47,6 @@ Reference data used by skills lives in `skills/<skill>/references/`. Starter con
 
 ## Key Design Decisions
 
-- The simplifier template (`simplifier-template.md`) uses `{{LANGUAGE}}` and `{{LANGUAGE_STANDARDS}}` placeholders — the setup skill performs string replacement at generation time to produce project-specific agents written to `.claude/agents/`
 - jscpd configs are per-language (`.jscpd-<lang>.json`) rather than a single config, to allow language-specific thresholds and ignore patterns
-- The review skill runs simplifier and duplication checks in parallel via the Task tool, and initially reports findings read-only before offering to apply changes
+- The coderev skill launches three review agents in parallel and reports findings read-only before offering to apply fixes — keeps audit and edit phases distinct so the user sees the full picture first
 - Best practices come from `skills/setup/references/claude-md-practices.md`: the Generic section is written into the user's CLAUDE.md, while language-specific sections are written to path-scoped `.claude/rules/cdx-<lang>.md` files. To add support for a new language, add a `## <Language>` section (with a `Paths:` line) to this reference file.
