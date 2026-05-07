@@ -1,0 +1,19 @@
+{
+  "threshold": 5,
+  "minLines": 20,
+  "minTokens": 100,
+  "reporters": ["console"],
+  "format": ["python"],
+  "ignore": [
+    ".venv/**",
+    "venv/**",
+    "**/__pycache__/**",
+    "**/migrations/**",
+    "**/*_test.py",
+    "**/test_*.py",
+    "**/tests/**",
+    "dist/**",
+    "build/**",
+    "**/*.egg-info/**"
+  ]
+}

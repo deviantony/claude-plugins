@@ -1,43 +1,36 @@
-# LSP Plugin Reference
+# LSP & Detection Reference
 
-This table maps programming languages to their Claude Code LSP plugins and required binaries.
+Single source of truth for the setup skill: how to detect each supported language and which Claude Code LSP plugin to install for it.
 
-Used by the setup skill to determine which LSP plugins to install for a detected tech stack.
+Supported languages: Go, TypeScript/JavaScript (one entry, key `ts`), Python, Swift. Anything else is silently skipped by the wizard.
 
-## Plugin Table
+## Detection
 
-| Language   | Plugin              | Binary                      | Install Command                                                      |
-|------------|---------------------|-----------------------------|----------------------------------------------------------------------|
-| Go         | gopls-lsp           | gopls                       | `go install golang.org/x/tools/gopls@latest`                         |
-| Python     | pyright-lsp         | pyright-langserver          | `npm install -g pyright`                                             |
-| TypeScript | typescript-lsp      | typescript-language-server  | `npm install -g typescript-language-server typescript`                |
-| Rust       | rust-analyzer-lsp   | rust-analyzer               | `rustup component add rust-analyzer`                                 |
-| C/C++      | clangd-lsp          | clangd                      | Install via system package manager (e.g., `apt install clangd`)      |
-| Java       | jdtls-lsp           | jdtls                       | Install Eclipse JDT Language Server from eclipse.org                 |
-| PHP        | php-lsp             | intelephense                | `npm install -g intelephense`                                        |
-| Kotlin     | kotlin-lsp          | kotlin-language-server      | Install from https://github.com/fwcd/kotlin-language-server/releases |
-| Swift      | swift-lsp           | sourcekit-lsp               | Included with Xcode / Swift toolchain                                |
-| C#         | csharp-lsp          | csharp-ls                   | `dotnet tool install -g csharp-ls`                                   |
-| Lua        | lua-lsp             | lua-language-server         | Install from https://github.com/LuaLS/lua-language-server/releases   |
+| Config file       | Language key |
+|-------------------|--------------|
+| go.mod            | go           |
+| package.json      | ts           |
+| tsconfig.json     | ts           |
+| pyproject.toml    | python       |
+| setup.py          | python       |
+| requirements.txt  | python       |
+| Package.swift     | swift        |
 
-## Detection Mapping
+## LSP Plugins
 
-Maps config files to languages:
+All plugins live on the `claude-plugins-official` marketplace, which is available by default.
 
-| Config File      | Language   |
-|------------------|------------|
-| go.mod           | Go         |
-| package.json     | TypeScript |
-| tsconfig.json    | TypeScript |
-| pyproject.toml   | Python     |
-| setup.py         | Python     |
-| requirements.txt | Python     |
-| Cargo.toml       | Rust       |
-| pom.xml          | Java       |
-| build.gradle     | Java       |
-| Gemfile          | Ruby       |
-| mix.exs          | Elixir     |
-| *.csproj         | C#         |
-| composer.json    | PHP        |
-| Package.swift    | Swift      |
-| build.zig        | Zig        |
+| Language key | Plugin           | Binary                       | Install command                                       |
+|--------------|------------------|------------------------------|-------------------------------------------------------|
+| go           | gopls-lsp        | gopls                        | `go install golang.org/x/tools/gopls@latest`          |
+| ts           | typescript-lsp   | typescript-language-server   | `pnpm add -g typescript-language-server typescript`   |
+| python       | pyright-lsp      | pyright-langserver           | `pnpm add -g pyright`                                 |
+| swift        | swift-lsp        | sourcekit-lsp                | Included with Xcode / Swift toolchain                 |
+
+Install a plugin with:
+
+```
+claude plugin install <plugin>@claude-plugins-official --scope project
+```
+
+After installs, run `/reload-plugins` in the Claude Code session to activate.

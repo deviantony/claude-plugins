@@ -8,6 +8,16 @@ user-invocable: true
 
 You are conducting a comprehensive code review of the current changes. The goal is to surface genuine issues — bugs, unnecessary complexity, missed reuse, inefficiency, convention drift, and security gaps — then give the user clear, actionable findings so they can decide what to fix.
 
+## Mindset
+
+Review like a thoughtful peer, not a checklist:
+
+- **Genuine issues only.** Stylistic preferences and matters of taste aren't findings. If the code is clean and direct, an empty report is the right outcome — don't manufacture findings to look thorough. Reviewer credibility comes from honest signal, not from finding-count.
+- **Specific over vague.** "This could be simpler" is a non-finding. "Lines 42-58 nest three conditionals where an early return would flatten the logic" is a finding. File path, line range, and a concrete recommended action are the minimum bar — without those, the user can't act on it.
+- **Accidental, not essential.** Complex code in a complex domain is honest. The goal is to surface complexity that exists *by accident* — copy-paste, premature abstraction, dead branches, defensive code for impossible states — not complexity that the problem actually demands.
+- **Severity by impact, not labels.** A 3-line helper that could be inlined is minor. A 200-line abstraction wrapping a single API call is major. Specificity in the description carries more signal than the priority tag itself — calibrate honestly so the user trusts what they're reading.
+- **Audit first, change later.** Findings are produced read-only — never modify files during analysis. Fixes happen only after the user has seen the full picture and chosen what to act on. Mixing the two phases robs the user of the chance to redirect.
+
 ## Process
 
 ### 1. Identify what changed
@@ -22,11 +32,20 @@ Scan for `.claude/skills/*/SKILL.md` files in the project root. For each skill f
 
 If no project skills are found, skip this step — the agents will still perform a thorough generic review.
 
-### 3. Launch three review agents in parallel
+### 3. Run tool-backed duplication scan
+
+If any `.jscpd-*.json` configs exist at the project root, invoke `cdx:scan` via the Skill tool, passing the changed file list as a comma-separated `args` string. Capture the structured findings as `SCAN_FINDINGS`.
+
+If no configs exist, or `cdx:scan` reports `jscpd not installed`, skip this step and note it for the report. The AI-level reuse review still runs.
+
+`SCAN_FINDINGS` (when present) will be handed to Agent 2 as tool-backed input — deterministic copy-paste already detected, so the agent can focus on semantic reuse instead of re-running grep over the diff.
+
+### 4. Launch three review agents in parallel
 
 Use the Agent tool to launch all three agents concurrently in a single message. Pass each agent:
 - The full diff and the list of changed files
 - The skill inventory from step 2 (if any)
+- `SCAN_FINDINGS` from step 3 (Agent 2 only, when available)
 
 Each agent must ANALYZE only — do NOT edit any files or make changes.
 
@@ -65,6 +84,8 @@ Category: **Code Reuse**, **Conventions**
 
 ```
 You are running a code review. Your job is to ANALYZE the code — do NOT edit any files or make changes.
+
+**Tool-backed input**: If `SCAN_FINDINGS` is provided in your context, those are deterministic copy-paste clones already detected by jscpd. Treat them as ground truth — do not re-detect what's already there. Include them in your final findings list verbatim (preserve priority and locations) and focus your own analysis on semantic reuse below.
 
 **Code Reuse** — For each change:
 1. Search for existing utilities and helpers that could replace newly written code. Use Grep to find similar patterns elsewhere in the codebase — common locations are utility directories, shared modules, and files adjacent to the changed ones.
@@ -109,7 +130,7 @@ If project skills are provided in context, invoke any that are relevant to the c
 Be thorough but honest. Only flag genuine efficiency or security issues — not micro-optimizations that don't matter at the project's scale or theoretical attacks with no realistic vector. An empty list is a valid result.
 ```
 
-### 4. Compile findings into a report
+### 5. Compile findings into a report
 
 Wait for all three agents to complete. First, deduplicate: if two agents flagged overlapping file + line ranges, keep the finding with the more specific description and drop the other. When in doubt, prefer the agent whose assigned categories are the better fit.
 
@@ -135,7 +156,7 @@ End the report with a summary:
 
 If no issues were found, say so clearly — that's a positive outcome.
 
-### 5. Offer to fix
+### 6. Offer to fix
 
 After presenting the findings, ask the user which ones they'd like to resolve. Offer these options:
 - Fix specific findings by number
@@ -145,11 +166,10 @@ After presenting the findings, ask the user which ones they'd like to resolve. O
 
 For any findings the user wants fixed, apply the changes directly. Each finding already includes the file path, line range, and recommended action — use that to make targeted edits. Keep changes minimal and focused on exactly what the finding describes.
 
-## Guidelines
+## Operational rules
 
-- **Audit first, change later.** Never modify files during the analysis phase. The user should see the full picture before anything changes.
-- **Be specific, not vague.** "This could be simpler" is not a finding. "The `processItems` function on lines 42-58 uses a nested map/filter/reduce chain that could be a single `for...of` loop" is a finding.
-- **Respect existing design decisions.** If code is complex because the domain is complex, note that rather than flagging it. The goal is to find *accidental* complexity, not *essential* complexity.
-- **Calibrate severity honestly.** A 3-line helper that could be inlined is a minor finding. A 200-line abstraction layer that wraps a single API call is a major one. The report should make this distinction clear through specificity, not through severity labels that invite debate.
+The Mindset section sets posture; these rules cover concrete process mechanics:
+
 - **Deduplicate across agents.** If two agents flag overlapping file + line ranges, keep the more specific finding and drop the other. Prefer the agent whose assigned categories are the better fit for the issue.
 - **Skills are advisory, not mandatory.** If project skills are discovered, agents should invoke them when relevant — but a missing skill never blocks the review. The generic analysis always runs.
+- **Tool-backed scans are advisory too.** `cdx:scan` runs only when `.jscpd-*.json` configs are present and jscpd is installed. If either is missing, the AI-level reuse review still produces a complete result.

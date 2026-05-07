@@ -1,0 +1,16 @@
+{
+  "threshold": 5,
+  "minLines": 20,
+  "minTokens": 100,
+  "reporters": ["console"],
+  "format": ["swift"],
+  "ignore": [
+    ".build/**",
+    "build/**",
+    "DerivedData/**",
+    "**/Tests/**",
+    "**/*Tests.swift",
+    "Pods/**",
+    "Carthage/**"
+  ]
+}

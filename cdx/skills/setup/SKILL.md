@@ -1,9 +1,10 @@
 ---
 name: setup
 description: |
-  Interactive setup wizard to bootstrap any project for Claude Code development.
-  Auto-detects tech stacks, configures LSP plugins, sets up duplication detection
+  Interactive setup wizard to bootstrap a project for Claude Code development.
+  Detects the tech stack, configures LSP plugins, sets up duplication detection
   via jscpd, and writes language-specific rules and best practices to CLAUDE.md.
+  Supports Go, TypeScript/JavaScript, Python, and Swift.
   Use when user says: "set up project for Claude", "initialize Claude Code",
   "bootstrap Claude dev environment", "cdx setup", or "configure Claude tools".
 user-invocable: true
@@ -11,226 +12,154 @@ user-invocable: true
 
 # CDX Setup Wizard
 
-You are running the CDX setup wizard. Walk the user through each step interactively, using AskUserQuestion to confirm decisions before taking action. Be concise and actionable.
+You are running the CDX setup wizard. Walk the user through each step interactively, using AskUserQuestion to confirm decisions before taking action. Be concise.
+
+This wizard supports four languages: **Go**, **TypeScript/JavaScript** (combined under key `ts`), **Python**, **Swift**. Anything else is silently skipped.
 
 ## Step 0: CLAUDE.md Pre-requisite
 
-Before anything else, check if the project has a `CLAUDE.md` in the project root using Glob.
+The wizard depends on a project `CLAUDE.md` for context. Glob the project root for `CLAUDE.md`.
 
-**If CLAUDE.md is missing**: Stop the wizard and tell the user:
+**If CLAUDE.md exists**: read it in full, store the content as `CLAUDE_MD_CONTENT`, continue.
 
-> This wizard works best when it can read your project's CLAUDE.md for context.
-> Please run `/init` first — it scans your codebase and creates a CLAUDE.md with project description, tech stack notes, and build commands. The setup wizard uses this to make smarter decisions about what to configure.
->
-> Once `/init` is done, run `/cdx:setup` again.
+**If CLAUDE.md is missing**: AskUserQuestion:
 
-Do not proceed to any further steps.
+- Question: "No CLAUDE.md found. Run `/init` now to generate one, then continue?"
+- Options: "Run /init now" / "Abort"
 
-**If CLAUDE.md exists**: Read it in full and carry the content forward as `CLAUDE_MD_CONTENT` — you will reference it in Step 1 and Step 5.
+If the user picks **Run /init now**: invoke the `init` skill via the Skill tool. When it returns, re-glob for `CLAUDE.md`. If still missing, abort with: "CLAUDE.md was not created — re-run `/cdx:setup` once it exists."
+
+If the user picks **Abort**: stop the wizard.
 
 ## Step 1: Tech Stack Detection
 
-Scan the project root for config files to detect the tech stack:
+Before detecting, verify the reference files exist (these ship with the plugin):
 
-- `go.mod` → Go
-- `package.json` → JavaScript/TypeScript
-- `tsconfig.json` → TypeScript
-- `pyproject.toml`, `setup.py`, `requirements.txt` → Python
-- `Cargo.toml` → Rust
-- `pom.xml`, `build.gradle` → Java
-- `Gemfile` → Ruby
-- `mix.exs` → Elixir
-- `*.csproj` → C#
-- `composer.json` → PHP
-- `Package.swift` → Swift
+- `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/lsp-plugins.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/claude-md-practices.md`
 
-Use Glob to check for these files. Collect all detected languages.
+If either is missing, abort: "Plugin install looks broken — reference files not found. Re-install cdx."
 
-Next, cross-reference with `CLAUDE_MD_CONTENT` (from Step 0). The `/init`-generated CLAUDE.md typically contains a project description, tech stack notes, and build commands. Look for mentions of languages, frameworks, or tools that glob-based detection may have missed (e.g., a monorepo where config files are in subdirectories, or a language used only for tooling/scripts).
+Read `lsp-plugins.md` and use its **Detection** table as the single source of truth for which config files map to which language key.
 
-Present both sources to the user via AskUserQuestion:
-- "I detected the following tech stack from config files: [glob list]. CLAUDE.md also mentions: [any additional languages/frameworks found]. Combined stack: [merged list]. Is this correct?"
-- If CLAUDE.md didn't add anything new, just show the glob results
-- Options: "Yes, proceed" / "Let me adjust" (allow them to add/remove languages)
+Glob the project root for the listed config files. Collect detected language keys (deduped).
 
-Store the confirmed stack for all subsequent steps.
+Cross-reference `CLAUDE_MD_CONTENT` for any of the four supported languages it mentions that the glob missed (common in monorepos where config files live in subdirectories).
 
-## Step 2: Git Initialization
+Present to the user via AskUserQuestion:
 
-Check if `.git/` exists in the project root using Bash: `test -d .git && echo exists || echo missing`
+- Question: "Detected stack: [list]. Confirm?"
+- Options: "Yes, proceed" / "Adjust" (lets them add or remove from the supported four)
 
-**If `.git/` exists**: Skip to .gitignore check.
+Store the confirmed stack as `STACK` for all subsequent steps. If any unsupported language was inferred, mention it once and ignore it for the rest of the wizard.
+
+## Step 2: Git and .gitignore
+
+Check for `.git/` via `test -d .git`.
 
 **If `.git/` is missing**:
-1. Use AskUserQuestion to ask:
-   - "Would you like to initialize a git repository?"
-   - If yes, ask for optional remote origin URL and default branch name (default: `main`)
-2. Run `git init` and set default branch
-3. Add remote if provided
 
-**`.gitignore` check**:
-- Check if `.gitignore` exists
-- If missing or empty, generate one based on the confirmed tech stack:
-  - Always include: `.env`, `.env.*`, `.DS_Store`, `*.swp`, `*.swo`, `.idea/`, `.vscode/`, `*.log`
-  - Go: `vendor/`, binary patterns
-  - Python: `__pycache__/`, `*.pyc`, `.venv/`, `venv/`, `dist/`, `*.egg-info/`
-  - TypeScript/JavaScript: `node_modules/`, `dist/`, `build/`, `.next/`
-  - Rust: `target/`
-  - Java: `target/`, `build/`, `*.class`
-  - Ruby: `.bundle/`, `vendor/bundle/`
-  - C#: `bin/`, `obj/`, `*.suo`, `*.user`
-  - PHP: `vendor/`
-- Use AskUserQuestion to confirm before writing
+- AskUserQuestion: "Initialize a git repository?" — Yes / No
+- If yes: ask for default branch name (default `main`) and optional remote URL, then run `git init -b <branch>` and `git remote add origin <url>` if provided.
 
-## Step 3: Claude Code Intelligence (LSP Plugins)
+**.gitignore handling**:
 
-Read the LSP plugin reference table from `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/lsp-plugins.md`.
+Build the proposed entry list:
 
-For each language in the confirmed tech stack that has an LSP plugin entry:
+- Always: `.env`, `.env.*`, `.DS_Store`, `*.swp`, `*.swo`, `.idea/`, `.vscode/`, `*.log`
+- For `go` in STACK: `vendor/`, `*.exe`, `*.test`, `*.out`
+- For `ts` in STACK: `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, `*.tsbuildinfo`
+- For `python` in STACK: `__pycache__/`, `*.pyc`, `.venv/`, `venv/`, `dist/`, `*.egg-info/`, `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`
+- For `swift` in STACK: `.build/`, `DerivedData/`, `*.xcodeproj/xcuserdata/`, `Package.resolved`
 
-1. **Check binary availability**: Use Bash to run `which <binary>` (e.g., `which gopls`, `which pyright-langserver`)
-2. **If binary is missing**:
-   - Warn the user: "LSP binary `<binary>` not found for <language>."
-   - Provide the install command from the reference table
-   - Use AskUserQuestion: "Install it now?" / "Skip, I'll install later"
-   - If they choose to install now, run the install command via Bash
-3. **If binary is present**:
-   - Install the Claude Code LSP plugin via Bash:
-     ```
-     claude plugin install <plugin>@claude-plugins-official --scope project
-     ```
-   - Report success
+Read `.gitignore` if it exists. Drop any proposed entry that already appears as a non-comment line (exact match after trimming whitespace). Present the de-duplicated list to the user via AskUserQuestion before appending. If the existing file already covers everything, report "gitignore already covers stack" and skip.
 
-After processing all languages, summarize which LSP plugins were installed and which need manual setup.
+## Step 3: LSP Plugins
 
-## Step 4: jscpd Setup
+For each language in STACK, look up its row in the **LSP Plugins** table from `lsp-plugins.md` (plugin name, binary, install command).
 
-1. **Check if jscpd is installed**: Run `which jscpd` via Bash
-2. **If not installed**: Use AskUserQuestion — "jscpd is not installed. Install it via `npm install -g jscpd`?"
-   - If yes: run `npm install -g jscpd`
-   - If no: skip duplication detection setup entirely
+For each language:
 
-3. **For each language in the confirmed stack**:
-   a. Check if a config exists at `${CLAUDE_PLUGIN_ROOT}/configs/jscpd/<language>.json` using Glob
-   b. **If config exists**: Read it and present to user
-   c. **If no config exists**: Generate a default config:
-      ```json
-      {
-        "threshold": 5,
-        "minLines": 20,
-        "minTokens": 100,
-        "reporters": ["console"],
-        "format": ["<language-format>"],
-        "ignore": [<language-appropriate-patterns>]
-      }
-      ```
-      Language format mappings:
-      - Go → `"go"`
-      - Python → `"python"`
-      - TypeScript → `"typescript"`, JavaScript → `"javascript"`
-      - Rust → `"rust"`
-      - Java → `"java"`
-      - Ruby → `"ruby"`
-      - C# → `"csharp"`
-      - PHP → `"php"`
-      - Swift → `"swift"`
-
-      Language-appropriate ignore patterns:
-      - Go: `vendor/**`, `**/*_test.go`, `**/*.pb.go`, `**/testdata/**`
-      - Python: `.venv/**`, `venv/**`, `**/__pycache__/**`, `**/migrations/**`, `**/*_test.py`, `**/tests/**`
-      - TypeScript/JS: `node_modules/**`, `dist/**`, `build/**`, `**/*.d.ts`, `**/*.min.js`
-      - Rust: `target/**`, `**/tests/**`
-      - Java: `target/**`, `build/**`, `**/test/**`
-      - Ruby: `vendor/**`, `**/spec/**`
-      - C#: `bin/**`, `obj/**`, `**/Tests/**`
-      - PHP: `vendor/**`, `**/tests/**`
-
-   d. Use AskUserQuestion to confirm or adjust the config before writing
-   e. Write the config to `.jscpd-<language>.json` in the project root
-
-## Step 5: Update CLAUDE.md and Create Language Rules
-
-Now update the project's CLAUDE.md and create language-specific rule files.
-
-1. **Read current state**: Read the project's `CLAUDE.md` again (it may have been modified by other steps).
-
-2. **Read best practices reference**: Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/claude-md-practices.md`.
-
-3. **Build the `## CDX Tools` section** from what was actually configured in previous steps. Only list items that were created — for example:
-
+1. Run `which <binary>`. If missing, AskUserQuestion: "Install `<binary>` for <language> via `<install command>`?" — Install now / Skip. If skipped, mark the language as needing manual setup and do not install the plugin for it.
+2. If the binary is present (or was just installed), run:
    ```
-   ## CDX Tools
-
-   The following tools were configured by `/cdx:setup`:
-
-   - **LSP plugins**: `gopls` installed at project scope for Go intelligence
-   - **Duplication detection**: `.jscpd-go.json` — run `jscpd --config .jscpd-go.json .` to check for duplicates
-   - **Language rules**: `.claude/rules/cdx-go.md` — Go-specific conventions and commands
+   claude plugin install <plugin>@claude-plugins-official --scope project
    ```
+3. Record the result.
 
-4. **Build the `## Best Practices` section** using only the `## Generic` block from the reference file. This section contains project-wide principles (YAGNI, early returns, single responsibility, etc.) that apply regardless of language.
+After processing all languages, tell the user to run `/reload-plugins` once the wizard finishes so the new LSPs activate.
 
-5. **Create language-specific rule files**: For each language in the confirmed stack, check if the reference file has a matching `## <Language>` section.
-   - **If it does**: Create `.claude/rules/cdx-<language>.md` (e.g., `.claude/rules/cdx-go.md`) with:
-     - YAML frontmatter containing a `paths` field scoped to that language's file extensions (e.g., `"**/*.go"` for Go)
-     - The language-specific content from the reference file (commands, conventions, file structure)
-   - **If the language has no entry in the reference**: Skip silently — no warning, no placeholder.
-   - Create the `.claude/rules/` directory if it doesn't exist.
+## Step 4: Duplication Detection (jscpd)
 
-   Example `.claude/rules/cdx-go.md`:
-   ```
-   ---
-   paths:
-     - "**/*.go"
-   ---
+**pnpm pre-check**: run `which pnpm`. If missing, AskUserQuestion: "pnpm is required (cdx standardizes on pnpm via safe-deps). Install it via `npm install -g pnpm` or follow https://pnpm.io/installation?" — Install now / Skip step. If skipped, abort this step entirely.
 
-   # Go
+**jscpd pre-check**: run `which jscpd`. If missing, AskUserQuestion: "Install jscpd globally via `pnpm add -g jscpd`?" — Install / Skip step. If skipped, abort this step.
 
-   Build and test commands:
-   ...
+For each language in STACK:
 
-   Conventions:
-   ...
-   ```
+1. Read the shipped config from `${CLAUDE_PLUGIN_ROOT}/configs/jscpd/<key>.json` (one ships per supported language). If the file is missing, skip that language and report it.
+2. Present the config to the user via AskUserQuestion: "Write `.jscpd-<key>.json` to project root?" — Write / Skip. Note that re-running this step will overwrite the file.
+3. If approved, write the file. Overwrite without warning if it already exists.
 
-6. **Handle re-runs**:
-   - If `## CDX Tools` or `## Best Practices` sections already exist in CLAUDE.md, replace them in place. Otherwise, append them at the end.
-   - If a `.claude/rules/cdx-<language>.md` file already exists, overwrite it.
+## Step 5: CLAUDE.md and Language Rules
 
-7. **Confirm before writing**: Present all proposed changes to the user via AskUserQuestion before writing anything. Show: the CLAUDE.md additions/replacements and the rule files that will be created.
+Re-read the project's `CLAUDE.md` (it may have been touched by earlier steps).
+Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/references/claude-md-practices.md`.
+
+**Build the `## CDX Tools` section** based on what was actually configured in earlier steps. Only list items that were created. Example:
+
+```
+## CDX Tools
+
+The following tools were configured by `/cdx:setup`:
+
+- LSP plugins: `gopls-lsp`, `typescript-lsp` (project scope)
+- Duplication detection: `.jscpd-go.json`, `.jscpd-ts.json` — run `/cdx:scan` to consume them
+- Language rules: `.claude/rules/cdx-go.md`, `.claude/rules/cdx-ts.md`
+```
+
+**Build the `## Best Practices` section** from the `## Generic` block in the practices reference verbatim.
+
+**Build language rule files**: For each language in STACK with a section in the practices reference, prepare `.claude/rules/cdx-<key>.md` with:
+
+- YAML frontmatter listing the `paths` from that section (e.g., `paths: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"]`)
+- The body of that section (commands, conventions, file structure) without the `Key:` and `Paths:` lines
+
+If a language in STACK has no section in the reference, skip silently.
+
+**Confirm before writing**: present all proposed changes via AskUserQuestion — the CLAUDE.md sections to add/replace and the rule files to create. Options: "Apply" / "Skip".
+
+**Apply**:
+
+- For CLAUDE.md, replace `## CDX Tools` and `## Best Practices` sections in place if present (matched by heading); otherwise append at the end.
+- For rule files, create `.claude/rules/` if missing, then write each file (overwrite).
 
 ## Step 6: Summary
 
-Present a clear summary of everything that was set up:
+Present a clear summary:
 
 ```
 ## CDX Setup Complete
 
-### Tech Stack
-- [list of confirmed languages]
+### Tech stack
+- [list]
 
 ### Git
 - [initialized / already existed]
-- .gitignore: [created / updated / already existed]
+- .gitignore: [created / appended N entries / already covered]
 
-### LSP Plugins Installed
-- [list of installed plugins]
+### LSP plugins (project scope)
+- [list]
+- Run `/reload-plugins` to activate.
+- Manual binary installs needed: [list, or omit line]
 
-### Duplication Detection
-- [list of jscpd configs created]
+### Duplication detection
+- [list of .jscpd-<key>.json files]
+- Run `/cdx:scan` to scan, or `/cdx:coderev` to fold scan findings into a code review.
 
 ### CLAUDE.md
-- [Updated with CDX Tools and Best Practices sections]
+- [Updated with CDX Tools and Best Practices sections, or "skipped"]
 
-### Language Rules
-- [list of .claude/rules/cdx-<language>.md files created]
-
-### Manual Steps Needed
-- [any pending items, e.g., "Install gopls: `go install golang.org/x/tools/gopls@latest`"]
+### Language rules
+- [list of .claude/rules/cdx-<key>.md files, or "skipped"]
 ```
-
-Point the user at the other cdx skills they may want to use:
-- `/cdx:coderev` — comprehensive code review (correctness, reuse, conventions, efficiency, security)
-- `/cdx:safe-deps` — enforced safe dependency installation
-- `/cdx:web-security-audit` — deep web-app security audit
-- `/cdx:labctl` — DigitalOcean VM management

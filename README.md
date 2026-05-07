@@ -35,21 +35,26 @@ Install with `/plugin install cdx@deviantony-plugins`.
 
 Interactive wizard that walks you through:
 
-1. **Tech stack detection** — scans for `go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, etc.
-2. **Git initialization** — sets up git repo and `.gitignore` if needed
-3. **LSP plugin installation** — installs Claude Code LSP plugins for your detected languages
-4. **jscpd setup** — configures duplication detection for your tech stack
-5. **CLAUDE.md + language rules** — writes generic best practices to CLAUDE.md and per-language rules to `.claude/rules/cdx-<lang>.md`
+1. **CLAUDE.md prerequisite** — runs `/init` for you if no CLAUDE.md exists, otherwise reads it for context
+2. **Tech stack detection** — scans for `go.mod`, `package.json`, `pyproject.toml`, `Package.swift`
+3. **Git initialization** — sets up git repo and `.gitignore` if needed
+4. **LSP plugin installation** — installs Claude Code LSP plugins for your detected languages
+5. **jscpd setup** — configures duplication detection (consumed by `/cdx:scan`)
+6. **CLAUDE.md + language rules** — writes generic best practices to CLAUDE.md and per-language rules to `.claude/rules/cdx-<key>.md`
 
 #### `/cdx:coderev`
 
 Comprehensive code review of current changes. Launches three agents in parallel covering:
 
 - Structure & correctness (simplification, over-engineering, YAGNI, dead code, correctness)
-- Code reuse & conventions (missed reuse, naming/structure drift)
+- Code reuse & conventions (missed reuse, naming/structure drift) — augmented with tool-backed duplication findings from `/cdx:scan` when configs are present
 - Efficiency & security (hot-path bloat, injection, auth gaps)
 
 Produces a structured findings report and offers to apply fixes.
+
+#### `/cdx:scan`
+
+Runs jscpd against the project's per-language `.jscpd-<key>.json` configs (created by `/cdx:setup`) and reports structured copy-paste duplication findings. Invoked automatically by `/cdx:coderev` when configs exist; can also be run standalone.
 
 #### `/cdx:safe-deps`
 
@@ -65,7 +70,7 @@ Manages DigitalOcean VMs via the `labctl` CLI — create, list, remove droplets.
 
 ### Supported Languages (setup wizard)
 
-Go, Python, TypeScript, JavaScript, Rust, Java, Ruby, C#, PHP, Swift, Kotlin, C/C++, Lua, Elixir
+Go, TypeScript/JavaScript, Python, Swift
 
 ## canon — Code Annotation Tool
 

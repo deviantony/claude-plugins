@@ -6,7 +6,7 @@ user-invocable: true
 
 # Safe Dependency Installation
 
-This skill enforces the user's preferred package managers and security-hardened install settings. Follow these rules for every dependency operation — no exceptions.
+This skill enforces the user's preferred package managers and security-hardened install settings. The rules below exist to defend against supply-chain attacks (typosquats, malicious post-install scripts, surprise updates pulled in by fuzzy version ranges) and to keep installs reproducible across environments — every constraint maps back to one of those two goals.
 
 ## Banned tools
 
