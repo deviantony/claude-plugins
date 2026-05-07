@@ -11,7 +11,7 @@
       "name": "cdx",
       "source": "./cdx",
       "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, and DigitalOcean VM management",
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "name": "canon",
