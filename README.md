@@ -68,6 +68,10 @@ Deep web-app security audit combining static code review with live-instance prob
 
 Manages DigitalOcean VMs via the `labctl` CLI — create, list, remove droplets. Always returns ready-to-paste SSH commands.
 
+#### `/cdx:dev-docs`
+
+Generates and maintains a `docs/generated/` directory of markdown developer documentation. Surveys the project, proposes a documentation plan, then writes structured docs with YAML frontmatter that tracks the commit each doc was last validated against — so subsequent runs can detect drift via `git diff` against the covered globs.
+
 ### Supported Languages (setup wizard)
 
 Go, TypeScript/JavaScript, Python, Swift

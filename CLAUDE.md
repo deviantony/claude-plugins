@@ -15,13 +15,14 @@ Users add this marketplace with:
 
 This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.json` lists all available plugins. Each plugin lives in its own top-level directory with its own `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
 
-The cdx plugin has six skills:
+The cdx plugin has seven skills:
 - `skills/setup/SKILL.md` → `/cdx:setup` — 7-step bootstrap wizard (CLAUDE.md check → stack detection → git init → LSP plugins → jscpd → update CLAUDE.md + language rules → summary). Supports Go, TypeScript/JavaScript, Python, Swift only.
 - `skills/coderev/SKILL.md` → `/cdx:coderev` — comprehensive code review (3 parallel agents covering correctness, reuse/conventions, efficiency/security; structured report; offers to fix). Reuse agent is augmented by `cdx:scan` when jscpd configs exist.
 - `skills/scan/SKILL.md` → `/cdx:scan` — runs jscpd against per-language `.jscpd-<key>.json` configs and reports structured duplication findings. Invoked by `cdx:coderev` and standalone.
 - `skills/safe-deps/SKILL.md` → `/cdx:safe-deps` — enforces pnpm/bun/uv with exact pinning, 10-day minimum release age, and disabled post-install scripts; bans npm/yarn/npx
 - `skills/web-security-audit/SKILL.md` → `/cdx:web-security-audit` — 7-phase web-app security audit (static + live), with per-class authorization gates and a timestamped output folder
 - `skills/labctl/SKILL.md` → `/cdx:labctl` — DigitalOcean VM management via the `labctl` CLI
+- `skills/dev-docs/SKILL.md` → `/cdx:dev-docs` — survey-plan-generate workflow that produces a `docs/generated/` markdown set with YAML frontmatter (`covers` globs + `scanned_at_commit`) for git-based drift detection on re-runs
 
 Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live in `configs/`.
 
