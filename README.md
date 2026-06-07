@@ -72,6 +72,14 @@ Manages DigitalOcean VMs via the `labctl` CLI — create, list, remove droplets.
 
 Generates and maintains a `docs/generated/` directory of markdown developer documentation. Surveys the project, proposes a documentation plan, then writes structured docs with YAML frontmatter that tracks the commit each doc was last validated against — so subsequent runs can detect drift via `git diff` against the covered globs.
 
+#### `/cdx:html-report`
+
+Turns a discussion, proposal, investigation, or set of findings into a single self-contained HTML report in the Portainer house style — DM Sans, the design-system palette, verdict bands, comparison tables, pros/cons cards, severity findings, and CSS-only diagrams. Inline CSS, no JavaScript, no build step; always starts from the shipped kitchen-sink template so every report looks like it came from the same hand.
+
+#### `/cdx:annotate-report`
+
+Post-processor that injects a PR-style review/comment layer into an existing house-style HTML report, producing a non-destructive `.annotated.html` copy a reviewer can mark up and hand back. The annotated file is still a single self-contained document — a reviewer highlights text, attaches comments, resolves them, and shares the result back or exports the open notes to an AI.
+
 ### Supported Languages (setup wizard)
 
 Go, TypeScript/JavaScript, Python, Swift

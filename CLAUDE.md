@@ -15,7 +15,7 @@ Users add this marketplace with:
 
 This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.json` lists all available plugins. Each plugin lives in its own top-level directory with its own `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
 
-The cdx plugin has seven skills:
+The cdx plugin has nine skills:
 - `skills/setup/SKILL.md` → `/cdx:setup` — 7-step bootstrap wizard (CLAUDE.md check → stack detection → git init → LSP plugins → jscpd → update CLAUDE.md + language rules → summary). Supports Go, TypeScript/JavaScript, Python, Swift only.
 - `skills/coderev/SKILL.md` → `/cdx:coderev` — comprehensive code review (3 parallel agents covering correctness, reuse/conventions, efficiency/security; structured report; offers to fix). Reuse agent is augmented by `cdx:scan` when jscpd configs exist.
 - `skills/scan/SKILL.md` → `/cdx:scan` — runs jscpd against per-language `.jscpd-<key>.json` configs and reports structured duplication findings. Invoked by `cdx:coderev` and standalone.
@@ -23,6 +23,8 @@ The cdx plugin has seven skills:
 - `skills/web-security-audit/SKILL.md` → `/cdx:web-security-audit` — 7-phase web-app security audit (static + live), with per-class authorization gates and a timestamped output folder
 - `skills/labctl/SKILL.md` → `/cdx:labctl` — DigitalOcean VM management via the `labctl` CLI
 - `skills/dev-docs/SKILL.md` → `/cdx:dev-docs` — survey-plan-generate workflow that produces a `docs/generated/` markdown set with YAML frontmatter (`covers` globs + `scanned_at_commit`) for git-based drift detection on re-runs
+- `skills/html-report/SKILL.md` → `/cdx:html-report` — turns a discussion or set of findings into a single self-contained HTML report in the Portainer house style, starting from `assets/report-template.html` (no JS, inline CSS, CSS-only diagrams)
+- `skills/annotate-report/SKILL.md` → `/cdx:annotate-report` — post-processor that injects a PR-style review/comment layer into an existing house-style HTML report via `scripts/annotate.py`, producing a non-destructive `.annotated.html` copy
 
 Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live in `configs/`.
 

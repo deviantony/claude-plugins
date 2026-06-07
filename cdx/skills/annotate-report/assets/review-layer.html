@@ -1,0 +1,701 @@
+<!-- ════════════════════════════════════════════════════════════════════
+     REVIEW ANNOTATION LAYER  ·  injected by the annotate-report skill
+     Self-contained: state island + styles + runtime. No external deps.
+     Removing this whole block restores the plain report.
+
+     THEMING: this layer carries no palette of its own. Every colour is
+     derived from the host report's :root design tokens (--accent, --con,
+     --pro, --surface, …) via color-mix, so it matches whatever house
+     style the report already uses and follows the design system if it
+     changes. The amber highlight is the --con hue lifted to highlighter
+     strength (the --con-soft token is a card tint, too faint over text).
+
+     UI: a single docked right sidebar holds everything — count, reviewer
+     name, actions, and the comment cards. It collapses to a reopen pill;
+     there is no separate floating toolbar. Clicking a card scrolls the
+     document to its target.
+
+     SCOPE (v1): single reviewer, flat notes (no reply threads), last-write
+     -wins merge by id. Reply threads and multi-reviewer import are
+     deliberately out of scope — add them here if the need shows up.
+     ════════════════════════════════════════════════════════════════════ -->
+
+<!-- Persisted review state. Baked in on export; read back on open. -->
+<script type="application/json" id="mcp-annotations">{"version":1,"annotations":[]}</script>
+
+<style id="mcp-style">
+  /* highlighted spans in the document */
+  mark.mcp-hl {
+    background: color-mix(in srgb, var(--con, #d97706) 22%, transparent);
+    border-bottom: 1.5px solid color-mix(in srgb, var(--con, #d97706) 55%, transparent);
+    border-radius: 2px;
+    padding: 0 1px;
+    cursor: pointer;
+    transition: background .12s ease;
+  }
+  mark.mcp-hl.mcp-active { background: color-mix(in srgb, var(--con, #d97706) 45%, transparent); }
+  mark.mcp-hl.mcp-resolved {
+    background: color-mix(in srgb, var(--pro, #16a34a) 16%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--pro, #16a34a) 45%, transparent);
+  }
+
+  /* block-level note marker (whole-paragraph comment).
+     Always rendered (just faint) so it is always clickable — hiding it on
+     hover left a dead gap between the text and the button in the margin. */
+  .mcp-anchorable { position: relative; }
+  .mcp-gutter {
+    position: absolute;
+    left: -2rem; top: .2em;
+    width: 1.35rem; height: 1.35rem;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong, rgba(17,24,39,.14));
+    background: var(--surface, #fff);
+    color: var(--muted, rgba(17,24,39,.55));
+    font-size: .85rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none; opacity: .18;
+    transition: opacity .12s ease, color .12s ease, border-color .12s ease;
+    box-shadow: 0 1px 2px rgba(16,24,40,.06);
+  }
+  .mcp-anchorable:hover > .mcp-gutter { opacity: .85; }
+  .mcp-gutter:hover { opacity: 1; color: var(--accent, #0ea5e9); border-color: var(--accent, #0ea5e9); }
+  .mcp-anchorable.mcp-has-note > .mcp-gutter {
+    opacity: 1; color: var(--con-deep, #92400e);
+    border-color: color-mix(in srgb, var(--con, #d97706) 55%, transparent);
+  }
+
+  /* floating "comment" button on text selection */
+  #mcp-selbtn {
+    position: absolute; z-index: 60;
+    background: var(--text, #111827); color: var(--surface, #fff);
+    font-family: inherit; font-size: .8rem; font-weight: 600;
+    padding: .35rem .65rem; border-radius: 6px;
+    border: none; cursor: pointer; display: none;
+    box-shadow: 0 4px 12px rgba(16,24,40,.25);
+    white-space: nowrap;
+  }
+  #mcp-selbtn::after {
+    content: ""; position: absolute; bottom: -5px; left: 12px;
+    border: 5px solid transparent; border-top-color: var(--text, #111827); border-bottom: 0;
+  }
+
+  /* ---- docked sidebar ---- */
+  #mcp-rail {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 50;
+    display: flex; flex-direction: column;
+    background: var(--bg, #f6f7f9);
+    border-left: 1px solid var(--border-strong, rgba(17,24,39,.14));
+    box-shadow: -8px 0 24px rgba(16,24,40,.06);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    transform: translateX(0); transition: transform .22s ease;
+  }
+  #mcp-rail.mcp-collapsed { transform: translateX(100%); }
+
+  .mcp-head { padding: 1rem 1rem .85rem; border-bottom: 1px solid var(--border, rgba(17,24,39,.08)); background: var(--surface, #fff); }
+  .mcp-head-top { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .75rem; }
+  .mcp-title { font-weight: 800; font-size: 1.05rem; letter-spacing: -.012em; color: var(--text, rgba(17,24,39,.92)); }
+  .mcp-count { font-size: .74rem; color: var(--muted, rgba(17,24,39,.55)); font-weight: 600; }
+  .mcp-collapse {
+    margin-left: auto; align-self: center;
+    border: 1px solid var(--border-strong, rgba(17,24,39,.14)); background: var(--surface, #fff);
+    border-radius: 6px; width: 1.7rem; height: 1.7rem; cursor: pointer;
+    color: var(--text-semi, rgba(17,24,39,.7)); font-size: 1.05rem; line-height: 1; padding: 0;
+  }
+  .mcp-collapse:hover { border-color: var(--accent, #0ea5e9); color: var(--accent, #0ea5e9); }
+  .mcp-name {
+    width: 100%; box-sizing: border-box;
+    border: 1px solid var(--border, rgba(17,24,39,.08)); border-radius: 6px;
+    padding: .42rem .55rem; font-family: inherit; font-size: .82rem;
+    color: var(--text, rgba(17,24,39,.92)); margin-bottom: .55rem;
+  }
+  .mcp-name:focus { outline: none; border-color: var(--accent, #0ea5e9); }
+  .mcp-head-actions { display: flex; gap: .4rem; }
+  .mcp-hbtn {
+    flex: 1 1 auto; font-family: inherit; font-size: .75rem; font-weight: 700;
+    padding: .42rem .4rem; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    border: 1px solid var(--border-strong, rgba(17,24,39,.14)); background: var(--surface, #fff);
+    color: var(--text-semi, rgba(17,24,39,.7));
+  }
+  .mcp-hbtn:hover { border-color: var(--accent, #0ea5e9); color: var(--accent, #0ea5e9); }
+  .mcp-hbtn.primary { background: var(--accent, #0ea5e9); border-color: var(--accent, #0ea5e9); color: #fff; }
+  .mcp-hbtn.primary:hover { color: #fff; opacity: .92; }
+  .mcp-hbtn.ok { border-color: var(--pro, #16a34a); color: var(--pro, #16a34a); }
+
+  .mcp-list { flex: 1 1 auto; overflow-y: auto; padding: .8rem .8rem 2rem; display: flex; flex-direction: column; gap: .65rem; }
+  .mcp-empty { color: var(--subtle, rgba(17,24,39,.38)); font-size: .82rem; line-height: 1.55; padding: 1.4rem .5rem; text-align: center; }
+
+  .mcp-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, rgba(17,24,39,.08));
+    border-radius: var(--radius-sm, 6px);
+    box-shadow: var(--card-shadow, 0 1px 2px rgba(16,24,40,.06));
+    padding: .7rem .8rem; cursor: pointer;
+    transition: box-shadow .12s ease, border-color .12s ease;
+  }
+  .mcp-card:hover { border-color: var(--border-strong, rgba(17,24,39,.14)); }
+  .mcp-card.mcp-active {
+    border-color: color-mix(in srgb, var(--con, #d97706) 55%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--con, #d97706) 35%, transparent), var(--card-shadow, 0 1px 2px rgba(16,24,40,.06));
+  }
+  .mcp-card.mcp-resolved { opacity: .72; border-color: color-mix(in srgb, var(--pro, #16a34a) 55%, transparent); }
+  .mcp-meta { display: flex; align-items: center; gap: .4rem; font-size: .72rem; color: var(--muted, rgba(17,24,39,.55)); margin-bottom: .4rem; }
+  /* colour lives here now — a small status dot, not a heavy left bar */
+  .mcp-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: color-mix(in srgb, var(--con, #d97706) 85%, transparent); }
+  .mcp-card.mcp-resolved .mcp-dot { background: var(--pro, #16a34a); }
+  .mcp-author { font-weight: 700; color: var(--text-semi, rgba(17,24,39,.7)); }
+  .mcp-quote {
+    font-size: .78rem; color: var(--text-semi, rgba(17,24,39,.7));
+    border-left: 2px solid var(--border, rgba(17,24,39,.08));
+    padding-left: .55rem; margin: 0 0 .5rem; font-style: italic;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .mcp-text { font-size: .86rem; line-height: 1.5; color: var(--text, rgba(17,24,39,.92)); white-space: pre-wrap; }
+  .mcp-text-empty { font-size: .8rem; color: var(--subtle, rgba(17,24,39,.38)); font-style: italic; }
+  .mcp-card textarea {
+    width: 100%; box-sizing: border-box; resize: vertical; min-height: 3.2rem;
+    font-family: inherit; font-size: .86rem; line-height: 1.45;
+    border: 1px solid var(--border-strong, rgba(17,24,39,.14)); border-radius: 5px; padding: .45rem .55rem;
+    color: var(--text, rgba(17,24,39,.92));
+  }
+  .mcp-card textarea:focus { outline: none; border-color: var(--accent, #0ea5e9); }
+  .mcp-actions { display: flex; gap: .4rem; margin-top: .55rem; flex-wrap: wrap; }
+  .mcp-btn {
+    font-family: inherit; font-size: .76rem; font-weight: 600;
+    padding: .3rem .6rem; border-radius: 5px; cursor: pointer;
+    border: 1px solid var(--border-strong, rgba(17,24,39,.14)); background: var(--surface, #fff); color: var(--text-semi, rgba(17,24,39,.7));
+  }
+  .mcp-btn:hover { border-color: var(--accent, #0ea5e9); color: var(--accent, #0ea5e9); }
+  .mcp-btn.mcp-primary { background: var(--accent, #0ea5e9); border-color: var(--accent, #0ea5e9); color: #fff; }
+  .mcp-btn.mcp-primary:hover { color: #fff; opacity: .92; }
+  .mcp-btn.mcp-danger:hover { border-color: var(--con, #d97706); color: var(--con, #d97706); }
+  .mcp-orphan { color: var(--con-deep, #92400e); }
+
+  /* reopen pill (shown only when the sidebar is collapsed) */
+  #mcp-reopen {
+    position: fixed; top: 1rem; right: 1rem; z-index: 51; display: none;
+    align-items: center; gap: .35rem;
+    background: var(--accent, #0ea5e9); color: #fff; border: none; cursor: pointer;
+    font-family: 'DM Sans', system-ui, sans-serif; font-weight: 700; font-size: .8rem;
+    padding: .5rem .9rem; border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(16,24,40,.16);
+  }
+
+  @media print {
+    #mcp-rail, #mcp-selbtn, .mcp-gutter, #mcp-reopen { display: none !important; }
+    body { margin-right: 0 !important; }
+    mark.mcp-hl { background: none; border-bottom: 1px dashed var(--con, #d97706); }
+  }
+</style>
+
+<script id="mcp-runtime">
+(function () {
+  "use strict";
+
+  // ---- config ---------------------------------------------------------
+  // Annotatable blocks: the leaf text elements of the house style. Listed
+  // as leaves (never a container plus its child) so blocks don't nest and
+  // a text selection always resolves to the innermost element.
+  var SELECTOR = [
+    ".page .lede",
+    ".page section.body-section p",
+    ".page section.body-section h2",
+    ".page section.body-section h3",
+    ".page .verdict p",
+    ".page li",
+    ".page .finding .f-title",
+    ".page .callout",
+    ".page td"
+  ].join(",");
+  var LS_KEY = "mcp-annotations:" + location.pathname;
+  var LS_NAME = "mcp-reviewer-name";
+  var RAIL_W = 340;   // sidebar width; the page reflows to its left on wide screens
+  var WIDE = 1100;    // below this the sidebar overlays instead of reflowing
+
+  var AI_PREAMBLE = [
+    "The XML below is the output of a document review session. A reviewer marked",
+    "passages of an HTML report and attached notes to them.",
+    "",
+    "For each <annotation>, the <note> is what the reviewer wants addressed —",
+    "answer it, fix the issue they flagged, or respond to their comment. The",
+    "<quote> (text annotations) or <target> (whole-block annotations) identifies",
+    "what they were pointing at. <prefix> and <suffix> are surrounding context to",
+    "help you locate the passage in the document; they are not the subject of the",
+    "note. Reference annotations by id in your reply."
+  ].join("\n");
+
+  // ---- state ----------------------------------------------------------
+  var annotations = [];   // {id, anchorId, quote, start, end, author, text, created, resolved, draft}
+  var activeId = null;
+  var rail, list, countEl, reopen, selBtn;
+
+  // ---- tiny utils -----------------------------------------------------
+  function norm(s) { return (s || "").replace(/\s+/g, " ").trim(); }
+  function hash(str) {
+    var h = 5381;
+    for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+  function uid() {
+    // ids only need to be unique within a session; anchorId is what must be
+    // stable across edits. counter + perf time avoids Math.random.
+    uid._n = (uid._n || 0) + 1;
+    return "a" + uid._n + Math.floor(performance.now()).toString(36);
+  }
+  function esc(s) {
+    return (s || "").replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function fmtTime(iso) {
+    if (!iso) return "";
+    try { return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
+    catch (e) { return iso; }
+  }
+  function annById(id) {
+    for (var i = 0; i < annotations.length; i++) if (annotations[i].id === id) return annotations[i];
+    return null;
+  }
+
+  // ---- anchoring ------------------------------------------------------
+  // Each annotatable block gets a stable data-anchor derived from its text,
+  // so anchors line up across exported copies and survive re-opening.
+  // Offsets are char positions within the block's text.
+  function assignAnchors() {
+    var seen = {};
+    document.querySelectorAll(SELECTOR).forEach(function (el) {
+      var base = hash(norm(el.textContent));
+      var id = base, n = 1;
+      while (seen[id]) id = base + "-" + (n++);
+      seen[id] = true;
+      el.dataset.anchor = id;
+      el.classList.add("mcp-anchorable");
+      // Whole-block "+" only on block-level elements — on list items and table
+      // cells it would crowd the markers/columns. Text-selection comments still
+      // work everywhere.
+      var noGutter = el.tagName === "LI" || el.tagName === "TD";
+      if (!noGutter && !el.querySelector(":scope > .mcp-gutter")) {
+        var g = document.createElement("span");
+        g.className = "mcp-gutter";
+        g.textContent = "+";
+        g.title = "Comment on this block";
+        g.addEventListener("click", function (e) { e.stopPropagation(); startDraft(id, 0, 0, ""); });
+        el.appendChild(g);
+      }
+    });
+  }
+  function blockFor(anchorId) { return document.querySelector('[data-anchor="' + CSS.escape(anchorId) + '"]'); }
+
+  function charOffset(block, container, offset) {
+    var r = document.createRange();
+    r.selectNodeContents(block);
+    try { r.setEnd(container, offset); } catch (e) { return 0; }
+    return r.toString().length;
+  }
+
+  // ---- highlight rendering -------------------------------------------
+  function clearHighlights() {
+    document.querySelectorAll("mark.mcp-hl").forEach(function (m) {
+      var parent = m.parentNode;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+      parent.normalize();
+    });
+  }
+  function textNodes(el) {
+    var out = [], w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    var n; while ((n = w.nextNode())) { if (!n.parentElement.classList.contains("mcp-gutter")) out.push(n); }
+    return out;
+  }
+  function wrapRange(block, start, end, ann) {
+    if (end <= start) return false;
+    var nodes = textNodes(block), pos = 0, wrapped = false;
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i], len = node.nodeValue.length;
+      var nodeStart = pos, nodeEnd = pos + len; pos = nodeEnd;
+      var s = Math.max(start, nodeStart), e = Math.min(end, nodeEnd);
+      if (s >= e) continue;
+      var seg = node;
+      if (s > nodeStart) seg = seg.splitText(s - nodeStart);
+      if (e < nodeEnd) seg.splitText(e - s);
+      var mark = document.createElement("mark");
+      mark.className = "mcp-hl" + (ann.resolved ? " mcp-resolved" : "");
+      mark.dataset.aid = ann.id;
+      seg.parentNode.replaceChild(mark, seg);
+      mark.appendChild(seg);
+      mark.addEventListener("click", function (id) {
+        return function (ev) { ev.stopPropagation(); focusAnnotation(id); };
+      }(ann.id));
+      wrapped = true;
+    }
+    return wrapped;
+  }
+  // Re-anchor: trust offsets if the quote still matches there, else search the
+  // quote text in the block (doc may have shifted), else mark orphaned.
+  function resolveSpan(ann) {
+    var block = blockFor(ann.anchorId);
+    if (!block) { ann._orphan = true; return; }
+    if (!ann.quote) { ann._orphan = false; return; } // whole-block note
+    var full = block.textContent;
+    if (full.slice(ann.start, ann.end) === ann.quote) { ann._orphan = false; return; }
+    var idx = full.indexOf(ann.quote);
+    if (idx >= 0) { ann.start = idx; ann.end = idx + ann.quote.length; ann._orphan = false; }
+    else ann._orphan = true;
+  }
+  function renderHighlights() {
+    clearHighlights();
+    document.querySelectorAll(".mcp-anchorable.mcp-has-note").forEach(function (el) { el.classList.remove("mcp-has-note"); });
+    annotations.forEach(function (ann) {
+      resolveSpan(ann);
+      var block = blockFor(ann.anchorId);
+      if (!block) return;
+      if (ann.quote && !ann._orphan) wrapRange(block, ann.start, ann.end, ann);
+      else block.classList.add("mcp-has-note");
+    });
+  }
+
+  // ---- sidebar layout -------------------------------------------------
+  function isWide() { return window.innerWidth > WIDE; }
+  function applyLayout() {
+    var collapsed = rail.classList.contains("mcp-collapsed");
+    // Reflow the page to the left of the sidebar only when there's room;
+    // on narrow screens the sidebar overlays the content instead.
+    document.body.style.marginRight = (!collapsed && isWide()) ? RAIL_W + "px" : "";
+    reopen.style.display = collapsed ? "inline-flex" : "none";
+  }
+  function openSidebar() { rail.classList.remove("mcp-collapsed"); applyLayout(); }
+  function closeSidebar() { rail.classList.add("mcp-collapsed"); applyLayout(); }
+
+  // ---- sidebar (built once; only the list + count re-render) ----------
+  function buildSidebar() {
+    rail.innerHTML =
+      '<div class="mcp-head">' +
+        '<div class="mcp-head-top">' +
+          '<span class="mcp-title">Review</span>' +
+          '<span class="mcp-count"></span>' +
+          '<button class="mcp-collapse" title="Collapse">›</button>' +
+        '</div>' +
+        '<input class="mcp-name" placeholder="Your name" />' +
+        '<div class="mcp-head-actions">' +
+          '<button class="mcp-hbtn primary" data-act="share">Share review</button>' +
+          '<button class="mcp-hbtn" data-act="ai">Export to AI</button>' +
+          '<button class="mcp-hbtn" data-act="clear">Clear</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mcp-list"></div>';
+
+    list = rail.querySelector(".mcp-list");
+    countEl = rail.querySelector(".mcp-count");
+
+    var name = rail.querySelector(".mcp-name");
+    name.value = localStorage.getItem(LS_NAME) || "";
+    name.addEventListener("input", function () { localStorage.setItem(LS_NAME, name.value.trim()); });
+
+    rail.querySelector(".mcp-collapse").addEventListener("click", closeSidebar);
+    rail.querySelector('[data-act="share"]').addEventListener("click", exportReview);
+    rail.querySelector('[data-act="ai"]').addEventListener("click", exportToAI);
+    rail.querySelector('[data-act="clear"]').addEventListener("click", function () {
+      if (confirm("Remove all annotations from this view?")) { annotations = []; persist(); renderAll(); }
+    });
+  }
+
+  function updateCount() {
+    var open = annotations.filter(function (a) { return !a.resolved && !a.draft; }).length;
+    var done = annotations.filter(function (a) { return a.resolved; }).length;
+    countEl.textContent = open + " open" + (done ? " · " + done + " resolved" : "");
+    reopen.textContent = "💬 Review" + (open ? " · " + open : "");
+  }
+
+  function renderRail() {
+    list.innerHTML = "";
+    var ordered = annotations.slice().sort(function (a, b) {
+      var ba = blockFor(a.anchorId), bb = blockFor(b.anchorId);
+      var ta = ba ? ba.getBoundingClientRect().top + window.scrollY : 0;
+      var tb = bb ? bb.getBoundingClientRect().top + window.scrollY : 0;
+      if (ta !== tb) return ta - tb;
+      return a.start - b.start;
+    });
+    if (!ordered.length) {
+      var empty = document.createElement("div");
+      empty.className = "mcp-empty";
+      empty.textContent = "No comments yet. Select text in the report, or use the + in the left margin, to add one.";
+      list.appendChild(empty);
+    } else {
+      ordered.forEach(function (ann) { list.appendChild(buildCard(ann)); });
+    }
+    updateCount();
+  }
+
+  function buildCard(ann) {
+    var card = document.createElement("div");
+    card.className = "mcp-card" + (ann.id === activeId ? " mcp-active" : "") + (ann.resolved ? " mcp-resolved" : "");
+    card.dataset.card = ann.id;
+    // Clicking the body focuses the note (and scrolls to it). Suppressed while
+    // editing so a click inside the textarea doesn't rebuild and lose input.
+    card.addEventListener("click", function () { if (!ann.draft && !ann._editing) focusAnnotation(ann.id); });
+
+    var meta = '<div class="mcp-meta"><span class="mcp-dot"></span><span class="mcp-author">' + esc(ann.author || "Reviewer") + "</span>" +
+      (ann.created ? "<span>·</span><span>" + esc(fmtTime(ann.created)) + "</span>" : "") +
+      (ann._orphan ? '<span>·</span><span class="mcp-orphan" title="The quoted text changed">⚠ orphaned</span>' : "") +
+      "</div>";
+    var quote = ann.quote ? '<div class="mcp-quote">“' + esc(ann.quote) + "”</div>" : "";
+
+    if (ann.draft || ann._editing) {
+      card.innerHTML = meta + quote +
+        '<textarea placeholder="Leave a note…">' + esc(ann.text || "") + "</textarea>" +
+        '<div class="mcp-actions">' +
+        '<button class="mcp-btn mcp-primary" data-act="save">Save</button>' +
+        '<button class="mcp-btn" data-act="cancel">Cancel</button>' +
+        "</div>";
+      var ta = card.querySelector("textarea");
+      setTimeout(function () { ta.focus(); }, 0);
+      ta.addEventListener("keydown", function (e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); saveDraft(ann, ta.value); }
+        if (e.key === "Escape") { e.preventDefault(); cancelDraft(ann); }
+      });
+      card.querySelector('[data-act="save"]').addEventListener("click", function (e) { e.stopPropagation(); saveDraft(ann, ta.value); });
+      card.querySelector('[data-act="cancel"]').addEventListener("click", function (e) { e.stopPropagation(); cancelDraft(ann); });
+    } else {
+      var body = ann.text ? '<div class="mcp-text">' + esc(ann.text) + "</div>"
+                          : '<div class="mcp-text-empty">(no note)</div>';
+      card.innerHTML = meta + quote + body +
+        '<div class="mcp-actions">' +
+        '<button class="mcp-btn" data-act="edit">Edit</button>' +
+        '<button class="mcp-btn" data-act="resolve">' + (ann.resolved ? "Reopen" : "Resolve") + "</button>" +
+        '<button class="mcp-btn mcp-danger" data-act="delete">Delete</button>' +
+        "</div>";
+      card.querySelector('[data-act="edit"]').addEventListener("click", function (e) { e.stopPropagation(); ann._editing = true; renderAll(); });
+      card.querySelector('[data-act="resolve"]').addEventListener("click", function (e) { e.stopPropagation(); ann.resolved = !ann.resolved; persist(); renderAll(); });
+      card.querySelector('[data-act="delete"]').addEventListener("click", function (e) { e.stopPropagation(); removeAnnotation(ann.id); });
+    }
+    return card;
+  }
+
+  // ---- annotation lifecycle ------------------------------------------
+  function startDraft(anchorId, start, end, quote) {
+    var ann = { id: uid(), anchorId: anchorId, quote: quote, start: start, end: end,
+                author: getName(), text: "", created: null, resolved: false, draft: true };
+    annotations.push(ann);
+    activeId = ann.id;
+    openSidebar();
+    renderAll();
+    hideSelBtn();
+    var card = list.querySelector('[data-card="' + ann.id + '"]');
+    if (card) card.scrollIntoView({ block: "nearest" });
+  }
+  function saveDraft(ann, text) {
+    text = (text || "").trim();
+    if (!text && ann.draft) { cancelDraft(ann); return; }
+    ann.text = text;
+    ann.author = getName();
+    if (!ann.created) ann.created = new Date().toISOString();
+    delete ann.draft; delete ann._editing;
+    persist(); renderAll();
+  }
+  function cancelDraft(ann) {
+    if (ann.draft) annotations = annotations.filter(function (a) { return a.id !== ann.id; });
+    else delete ann._editing;
+    renderAll();
+  }
+  function removeAnnotation(id) {
+    annotations = annotations.filter(function (a) { return a.id !== id; });
+    if (activeId === id) activeId = null;
+    persist(); renderAll();
+  }
+  function focusAnnotation(id) {
+    activeId = id;
+    openSidebar();
+    document.querySelectorAll("mark.mcp-hl").forEach(function (m) { m.classList.toggle("mcp-active", m.dataset.aid === id); });
+    renderRail();
+    // Scroll the document to the target passage…
+    var ann = annById(id);
+    var target = document.querySelector('mark.mcp-hl[data-aid="' + id + '"]') || (ann && blockFor(ann.anchorId));
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    // …and bring the card into view within the rail.
+    var card = list.querySelector('[data-card="' + id + '"]');
+    if (card) card.scrollIntoView({ block: "nearest" });
+  }
+
+  // ---- selection → comment button ------------------------------------
+  function onSelection() {
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) { hideSelBtn(); return; }
+    var range = sel.getRangeAt(0);
+    var node = range.startContainer;
+    var block = (node.nodeType === 3 ? node.parentElement : node).closest("[data-anchor]");
+    if (!block || !block.contains(range.endContainer)) { hideSelBtn(); return; }
+    var quote = norm(range.toString());
+    if (quote.length < 2) { hideSelBtn(); return; }
+    var start = charOffset(block, range.startContainer, range.startOffset);
+    var end = charOffset(block, range.endContainer, range.endOffset);
+    var rect = range.getBoundingClientRect();
+    selBtn._pending = { anchorId: block.dataset.anchor, start: start, end: end, quote: range.toString() };
+    selBtn.style.display = "block";
+    selBtn.style.left = (rect.left + window.scrollX + rect.width / 2 - selBtn.offsetWidth / 2) + "px";
+    selBtn.style.top = (rect.top + window.scrollY - selBtn.offsetHeight - 8) + "px";
+  }
+  function hideSelBtn() { if (selBtn) { selBtn.style.display = "none"; selBtn._pending = null; } }
+
+  // ---- exports --------------------------------------------------------
+  function getName() { return (localStorage.getItem(LS_NAME) || "Reviewer"); }
+
+  function flashBtn(btn, msg) {
+    if (!btn) return;
+    var prev = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(function () { btn.textContent = prev; }, 1600);
+  }
+
+  // Share: download a clean self-contained copy with the notes baked into the
+  // state island, ready to send back. Re-hydrates on open.
+  function exportReview() {
+    annotations = annotations.filter(function (a) { return !a.draft || a.text; });
+    annotations.forEach(function (a) { delete a.draft; delete a._editing; });
+    persist();
+
+    clearHighlights();
+    var clone = document.documentElement.cloneNode(true);
+    ["mcp-rail", "mcp-selbtn", "mcp-reopen"].forEach(function (id) {
+      var n = clone.querySelector("#" + id); if (n) n.remove();
+    });
+    clone.querySelectorAll(".mcp-gutter").forEach(function (g) { g.remove(); });
+    var b = clone.querySelector("body"); if (b) b.style.marginRight = ""; // reset the reflow
+    var slim = annotations.map(function (a) {
+      return { id: a.id, anchorId: a.anchorId, quote: a.quote, start: a.start, end: a.end,
+               author: a.author, text: a.text, created: a.created, resolved: !!a.resolved };
+    });
+    clone.querySelector("#mcp-annotations").textContent = JSON.stringify({ version: 1, annotations: slim });
+
+    var html = "<!doctype html>\n" + clone.outerHTML;
+    var blob = new Blob([html], { type: "text/html" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var base = (location.pathname.split("/").pop() || "document").replace(/\.html?$/, "");
+    a.href = url; a.download = base + ".reviewed.html";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+    renderHighlights();
+  }
+
+  // Export to AI: serialize the notes as XML and copy to the clipboard. The
+  // file:// origin is often not a secure context, so the clipboard API may be
+  // unavailable or rejected — log loudly when that happens so it's diagnosable
+  // (an XML-into-a-textarea fallback can be added if this proves unreliable).
+  // Resolved notes are intentionally excluded — the AI handoff is the open work.
+  function aiSerialize() {
+    var items = annotations.filter(function (a) { return !a.draft && !a.resolved; });
+    var out = [];
+    items.forEach(function (a, i) {
+      var block = blockFor(a.anchorId);
+      var attrs = ' id="' + (i + 1) + '"' +
+        (a.created ? ' created_at="' + esc(a.created) + '"' : "");
+      if (a.quote) {
+        var full = block ? block.textContent : "";
+        var pre = norm(full.slice(Math.max(0, a.start - 60), a.start));
+        var suf = norm(full.slice(a.end, a.end + 60));
+        out.push('<annotation type="text"' + attrs + ">");
+        if (pre) out.push("  <prefix>" + esc(pre) + "</prefix>");
+        out.push("  <quote>" + esc(norm(a.quote)) + "</quote>");
+        if (suf) out.push("  <suffix>" + esc(suf) + "</suffix>");
+        if (a.text) out.push("  <note>" + esc(a.text) + "</note>");
+        out.push("</annotation>");
+      } else {
+        var tag = block ? block.tagName.toLowerCase() : "";
+        out.push('<annotation type="element"' + attrs + ">");
+        out.push("  <target" + (tag ? ' tag="' + tag + '"' : "") + ">");
+        var tt = norm(block ? block.textContent : "");
+        if (tt) out.push("    <text>" + esc(tt) + "</text>");
+        out.push("  </target>");
+        if (a.text) out.push("  <note>" + esc(a.text) + "</note>");
+        out.push("</annotation>");
+      }
+    });
+    var head = "<report" + (document.title ? ' title="' + esc(document.title) + '"' : "") +
+      ' captured_at="' + new Date().toISOString() + '">';
+    var body = out.map(function (l) { return "  " + l; }).join("\n");
+    return AI_PREAMBLE + "\n\n" + head + "\n" + body + "\n</report>";
+  }
+
+  function exportToAI(e) {
+    var btn = e && e.currentTarget;
+    var items = annotations.filter(function (a) { return !a.draft && !a.resolved; });
+    if (!items.length) { flashBtn(btn, "No open notes"); return; }
+    var xml = aiSerialize();
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      console.error("[annotate-report] clipboard API unavailable (likely an insecure file:// context). XML follows:\n" + xml);
+      flashBtn(btn, "Copy failed — see console");
+      return;
+    }
+    navigator.clipboard.writeText(xml).then(function () {
+      flashBtn(btn, "Copied ✓");
+    }).catch(function (err) {
+      console.error("[annotate-report] clipboard write failed:", err);
+      console.error("[annotate-report] XML follows:\n" + xml);
+      flashBtn(btn, "Copy failed — see console");
+    });
+  }
+
+  // ---- persistence ----------------------------------------------------
+  function persist() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(annotations.filter(function (a) { return !a.draft; }))); }
+    catch (e) {}
+  }
+  function loadState() {
+    var fromIsland = [];
+    try { fromIsland = (JSON.parse(document.getElementById("mcp-annotations").textContent || "{}").annotations) || []; }
+    catch (e) {}
+    var fromLS = [];
+    try { fromLS = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch (e) {}
+    var byId = {};
+    fromIsland.concat(fromLS).forEach(function (a) { if (a && a.id) byId[a.id] = a; }); // LS wins
+    annotations = Object.keys(byId).map(function (k) { return byId[k]; });
+  }
+
+  // ---- wiring ---------------------------------------------------------
+  function renderAll() { renderHighlights(); renderRail(); }
+
+  // Chrome is built at runtime (never static markup) so exporting a clean copy
+  // is just "strip these ids" — they're rebuilt on every open. A stale static
+  // element the runtime looks up by id would crash init() on reopen.
+  function mkEl(tag, id, text) {
+    var el = document.createElement(tag);
+    el.id = id;
+    if (text) el.textContent = text;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function init() {
+    if (!document.querySelector(".page")) return; // not a house-style report; do nothing
+    rail = mkEl("div", "mcp-rail");
+    selBtn = mkEl("button", "mcp-selbtn", "💬 Comment");
+    reopen = mkEl("button", "mcp-reopen", "💬 Review");
+    reopen.addEventListener("click", openSidebar);
+
+    buildSidebar();
+    assignAnchors();
+    loadState();
+    renderAll();
+
+    rail.classList.add("mcp-collapsed"); // hidden by default; open via the reopen pill
+    applyLayout();
+
+    document.addEventListener("mouseup", function (e) { if (e.target !== selBtn) setTimeout(onSelection, 0); });
+    selBtn.addEventListener("mousedown", function (e) { e.preventDefault(); });
+    selBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var p = selBtn._pending; if (!p) return;
+      startDraft(p.anchorId, p.start, p.end, p.quote);
+      window.getSelection().removeAllRanges();
+    });
+    document.addEventListener("mousedown", function (e) {
+      if (!e.target.closest("mark.mcp-hl") && !e.target.closest("#mcp-selbtn")) hideSelBtn();
+    });
+
+    window.addEventListener("resize", function () { applyLayout(); });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
