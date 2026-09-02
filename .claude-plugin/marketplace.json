@@ -10,8 +10,8 @@
     {
       "name": "cdx",
       "source": "./cdx",
-      "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, and DigitalOcean VM management",
-      "version": "2.3.0"
+      "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, plain-language explanations, and DigitalOcean VM management",
+      "version": "2.4.0"
     },
     {
       "name": "canon",
@@ -22,7 +22,11 @@
       "description": "Browser-based annotation tool that lets you add line-specific feedback to any file",
       "homepage": "https://github.com/deviantony/canon",
       "license": "MIT",
-      "keywords": ["code-review", "annotations", "feedback"]
+      "keywords": [
+        "code-review",
+        "annotations",
+        "feedback"
+      ]
     }
   ]
 }
