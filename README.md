@@ -80,6 +80,10 @@ Turns a discussion, proposal, investigation, or set of findings into a single se
 
 Post-processor that injects a PR-style review/comment layer into an existing house-style HTML report, producing a non-destructive `.annotated.html` copy a reviewer can mark up and hand back. The annotated file is still a single self-contained document — a reviewer highlights text, attaches comments, resolves them, and shares the result back or exports the open notes to an AI.
 
+#### `/cdx:simple`
+
+Explains a topic, problem, solution, or ticket in the simplest possible terms, working from the conversation first and reaching for tools (issue trackers, files, grep) only when context is missing. Starts with a short gist (what it is, why it matters, three key points) and offers more detail one level at a time: a bit more, then the full explanation. Manually invoked, e.g. `/cdx:simple explain the problem` or `/cdx:simple ticket 1234`.
+
 ### Supported Languages (setup wizard)
 
 Go, TypeScript/JavaScript, Python, Swift
