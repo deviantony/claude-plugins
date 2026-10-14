@@ -10,8 +10,8 @@
     {
       "name": "cdx",
       "source": "./cdx",
-      "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, plain-language explanations, and DigitalOcean VM management",
-      "version": "2.4.0"
+      "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, plain-language explanations, context-clear handoffs, and DigitalOcean VM management",
+      "version": "2.5.0"
     },
     {
       "name": "canon",

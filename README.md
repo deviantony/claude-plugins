@@ -84,6 +84,10 @@ Post-processor that injects a PR-style review/comment layer into an existing hou
 
 Explains a topic, problem, solution, or ticket in the simplest possible terms, working from the conversation first and reaching for tools (issue trackers, files, grep) only when context is missing. Starts with a short gist (what it is, why it matters, three key points) and offers more detail one level at a time: a bit more, then the full explanation. Manually invoked, e.g. `/cdx:simple explain the problem` or `/cdx:simple ticket 1234`.
 
+#### `/cdx:wrap`
+
+Prepares for a context clear. Flags uncommitted or conversation-only work that would be lost, brings the repo's written plan file up to date if it keeps one (never creates one), and prints a single self-contained oneliner to paste into a fresh session to resume the next piece of work. Manually invoked, e.g. `/cdx:wrap` or `/cdx:wrap next: add tests`.
+
 ### Supported Languages (setup wizard)
 
 Go, TypeScript/JavaScript, Python, Swift
