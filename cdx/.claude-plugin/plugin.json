@@ -1,6 +1,6 @@
 {
   "name": "cdx",
-  "version": "3.0.0",
+  "version": "2.6.0",
   "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, plain-language explanations, and context-clear handoffs",
   "author": {
     "name": "deviantony"
