@@ -1,7 +1,7 @@
 {
   "name": "cdx",
-  "version": "2.5.0",
-  "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, plain-language explanations, context-clear handoffs, and DigitalOcean VM management",
+  "version": "3.0.0",
+  "description": "Claude Developer Experience — setup wizard, code review, dependency safety, web security audit, developer documentation, HTML reports, plain-language explanations, and context-clear handoffs",
   "author": {
     "name": "deviantony"
   },

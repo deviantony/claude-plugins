@@ -25,7 +25,7 @@ After marketplace operations you may need to run `/reload-plugins` for changes t
 
 ## cdx — Claude Developer Experience
 
-A bundle of skills covering project bootstrapping, code review, dependency safety, web security auditing, and DigitalOcean VM management.
+A bundle of skills covering project bootstrapping, code review, dependency safety, web security auditing, developer documentation, HTML reports, plain-language explanations, and context-clear handoffs.
 
 Install with `/plugin install cdx@deviantony-plugins`.
 
@@ -63,10 +63,6 @@ Enforces safe dependency installation: bans `npm`/`yarn`/`npx`, uses `pnpm`/`bun
 #### `/cdx:web-security-audit`
 
 Deep web-app security audit combining static code review with live-instance probing. Seven phases (scope, preflight, recon, threat model, investigation, findings, summary), with per-class authorization gates for active testing.
-
-#### `/cdx:labctl`
-
-Manages DigitalOcean VMs via the `labctl` CLI — create, list, remove droplets. Always returns ready-to-paste SSH commands.
 
 #### `/cdx:dev-docs`
 
