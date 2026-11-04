@@ -1,0 +1,92 @@
+<!doctype html>
+<!--
+  cdx:sketch-diagram source template. Copy to <name>.src.html, replace every
+  PLACEHOLDER block, then build:
+    bun ${CLAUDE_PLUGIN_ROOT}/skills/sketch-diagram/scripts/build.ts <name>.src.html -o <name>.html
+  Leave the three double-underscore slots (fonts in <style>, two <script>s) as they are;
+  build.ts fills them.
+  Tokens and recipes: references/style.md.
+-->
+<meta charset="utf-8">
+<title>PLACEHOLDER title</title>
+<style>
+__FONTS__
+:root { --loop: 3000ms; --ink: #212020; --paper: #f8f5e8;
+        --font-title: 'Kalam', cursive;
+        --font-body: 'PatrickHand', cursive; }
+body { margin: 0; background: var(--paper); }
+.canvas { width: 1200px; margin: 0 auto; }
+svg { display: block; }
+svg text { font-family: var(--font-body); fill: var(--ink); }
+.t-title, .t-strong { font-family: var(--font-title); font-weight: 700; }
+.mono { font-family: ui-monospace, 'DejaVu Sans Mono', Menlo, monospace; }
+
+/* flow dots (recipe 6): set --t per dot to loop, loop/2, loop/3 or loop/4 */
+.dot { offset-rotate: 0deg; transform-box: fill-box; transform-origin: center;
+       animation: travel var(--t, var(--loop)) linear infinite,
+                  breathe calc(var(--loop) / 4) ease-in-out infinite; }
+@keyframes travel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+@keyframes breathe { 50% { transform: scale(1.35); } }
+/* stagger dots on the same or neighbouring edges: offsets are fractions of the dot's own --t */
+.d2 { animation-delay: calc(var(--t, var(--loop)) / -3); }
+.d3 { animation-delay: calc(var(--t, var(--loop)) * -2 / 3); }
+.dh { animation-delay: calc(var(--t, var(--loop)) / -2); }
+.rev { animation-direction: reverse; }
+
+/* micro-motion (recipe 7): use 2 to 4, delete the rest */
+.spin { transform-box: fill-box; transform-origin: center;
+        animation: spin var(--loop) linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.tick { stroke-dasharray: 26; animation: draw var(--loop) ease-in-out infinite; }
+@keyframes draw { 0% { stroke-dashoffset: 26; } 40%, 70% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -26; } }
+.blink { animation: blink calc(var(--loop) / 4) steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.pulse { transform-box: fill-box; transform-origin: center;
+         animation: pulse calc(var(--loop) / 2) ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.25) rotate(10deg); } }
+</style>
+<div class="canvas">
+<!-- Height H: set the viewBox, the height attribute and both background rects to the same value. -->
+<svg viewBox="0 0 1200 600" width="1200" height="600">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 8" refX="9" refY="4"
+            markerWidth="8" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 4 L0 8 Z" fill="var(--ink)"/>
+    </marker>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.06 0.06 0.06 0 0"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="600" fill="var(--paper)"/>
+  <rect width="1200" height="600" filter="url(#grain)"/>
+
+  <!-- ===== PLACEHOLDER: title (recipe 1) ===== -->
+  <text class="t-title" x="40" y="74" font-size="56">PLACEHOLDER Title</text>
+  <path data-rough data-roughness="2.2" d="M42 90 Q220 102 420 86" fill="none" stroke="var(--ink)" stroke-width="3"/>
+  <path class="pulse" d="M440 54 l3.5 8.5 8.5 3.5 -8.5 3.5 -3.5 8.5 -3.5 -8.5 -8.5 -3.5 8.5 -3.5 z" fill="var(--ink)"/>
+  <text x="42" y="116" font-size="15" opacity="0.65">PLACEHOLDER subtitle</text>
+
+  <!-- ===== PLACEHOLDER: region 1 (recipe 2), sage ===== -->
+  <g>
+    <rect data-rough data-roughness="1.8" x="40" y="150" width="1120" height="400" rx="18"
+          fill="#f0f1e0" stroke="var(--ink)" stroke-width="2.2"/>
+    <circle data-rough cx="70" cy="180" r="15" fill="var(--ink)" stroke="none"/>
+    <text class="t-strong" x="70" y="188" font-size="20" style="fill:var(--paper)" text-anchor="middle">1</text>
+    <text class="t-strong" x="600" y="188" font-size="24" text-anchor="middle">PLACEHOLDER region title</text>
+
+    <!-- PLACEHOLDER: two cards (recipe 3) and one edge (recipe 5) with its dot (recipe 6) -->
+    <rect data-rough x="120" y="300" width="180" height="70" rx="8" fill="#faf7eb" stroke="var(--ink)" stroke-width="1.7"/>
+    <text class="t-strong" x="210" y="342" font-size="16" text-anchor="middle">PLACEHOLDER A</text>
+    <path data-rough d="M304 335 Q450 318 596 335" fill="none" stroke="var(--ink)" stroke-width="2" marker-end="url(#arr)"/>
+    <text x="450" y="312" font-size="14" text-anchor="middle">PLACEHOLDER label</text>
+    <rect data-rough x="600" y="300" width="180" height="70" rx="8" fill="#faf7eb" stroke="var(--ink)" stroke-width="1.7"/>
+    <text class="t-strong" x="690" y="342" font-size="16" text-anchor="middle">PLACEHOLDER B</text>
+    <circle class="dot" r="4.5" fill="#5f7a4a" stroke="var(--paper)" stroke-width="2.5"
+            style="offset-path: path('M304 335 Q450 318 596 335'); --t: var(--loop)"/>
+  </g>
+</svg>
+</div>
+<script>__ROUGH__</script>
+<script>__SKETCHIFY__</script>
+<script>sketchify()</script>

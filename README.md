@@ -76,6 +76,12 @@ Turns a discussion, proposal, investigation, or set of findings into a single se
 
 Post-processor that injects a PR-style review/comment layer into an existing house-style HTML report, producing a non-destructive `.annotated.html` copy a reviewer can mark up and hand back. The annotated file is still a single self-contained document — a reviewer highlights text, attaches comments, resolves them, and shares the result back or exports the open notes to an AI.
 
+#### `/cdx:sketch-diagram`
+
+Draws an animated, hand-drawn-style technical diagram: ink doodles on beige paper, wobbly rough.js strokes, faint watercolour regions, doodle icons, and dots flowing along the edges. Plans the layout from the content's shape and choreographs the flow so the motion retells the topic, previews frames and fixes issues, then delivers a self-contained HTML file and a seamlessly looping GIF. Fonts (OFL) and rough.js (MIT) are bundled; icons are drawn inline, nothing is fetched from the network.
+
+Prerequisites: `bun`, `ffmpeg`, and a headless Chrome (`$CHROME_PATH`, Playwright's headless shell in `~/.cache/ms-playwright`, or `chromium`/`google-chrome` on `PATH`; `bunx playwright install chromium-headless-shell` installs one).
+
 #### `/cdx:simple`
 
 Explains a topic, problem, solution, or ticket in the simplest possible terms, working from the conversation first and reaching for tools (issue trackers, files, grep) only when context is missing. Starts with a short gist (what it is, why it matters, three key points) and offers more detail one level at a time: a bit more, then the full explanation. Manually invoked, e.g. `/cdx:simple explain the problem` or `/cdx:simple ticket 1234`.
