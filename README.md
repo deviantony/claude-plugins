@@ -25,22 +25,11 @@ After marketplace operations you may need to run `/reload-plugins` for changes t
 
 ## cdx — Claude Developer Experience
 
-A bundle of skills covering project bootstrapping, code review, dependency safety, web security auditing, developer documentation, HTML reports, plain-language explanations, and context-clear handoffs.
+A bundle of skills covering code review, dependency safety, web security auditing, developer documentation, HTML reports, plain-language explanations, and context-clear handoffs.
 
 Install with `/plugin install cdx@deviantony-plugins`.
 
 ### Commands
-
-#### `/cdx:setup`
-
-Interactive wizard that walks you through:
-
-1. **CLAUDE.md prerequisite** — runs `/init` for you if no CLAUDE.md exists, otherwise reads it for context
-2. **Tech stack detection** — scans for `go.mod`, `package.json`, `pyproject.toml`, `Package.swift`
-3. **Git initialization** — sets up git repo and `.gitignore` if needed
-4. **LSP plugin installation** — installs Claude Code LSP plugins for your detected languages
-5. **jscpd setup** — configures duplication detection (consumed by `/cdx:scan`)
-6. **CLAUDE.md + language rules** — writes generic best practices to CLAUDE.md and per-language rules to `.claude/rules/cdx-<key>.md`
 
 #### `/cdx:coderev`
 
@@ -52,7 +41,7 @@ Pre-PR code review. Claude runs it on its own before opening a pull request; you
 
 #### `/cdx:scan`
 
-Runs jscpd against the project's per-language `.jscpd-<key>.json` configs (created by `/cdx:setup`) and reports structured copy-paste duplication findings. Invoked automatically by `/cdx:coderev` when configs exist; can also be run standalone.
+Runs jscpd against the project's per-language `.jscpd-<key>.json` configs and reports structured copy-paste duplication findings. Invoked automatically by `/cdx:coderev` when configs exist; can also be run standalone. To enable it, copy a starter config from `cdx/configs/jscpd/<key>.json` (go, ts, python, swift) to your project root as `.jscpd-<key>.json`.
 
 #### `/cdx:safe-deps`
 
@@ -70,10 +59,6 @@ Generates and maintains a `docs/generated/` directory of markdown developer docu
 
 Turns a discussion, proposal, investigation, or set of findings into a single self-contained HTML report in the Portainer house style — DM Sans, the design-system palette, verdict bands, comparison tables, pros/cons cards, severity findings, and CSS-only diagrams. Inline CSS, no JavaScript, no build step; always starts from the shipped kitchen-sink template so every report looks like it came from the same hand.
 
-#### `/cdx:annotate-report`
-
-Post-processor that injects a PR-style review/comment layer into an existing house-style HTML report, producing a non-destructive `.annotated.html` copy a reviewer can mark up and hand back. The annotated file is still a single self-contained document — a reviewer highlights text, attaches comments, resolves them, and shares the result back or exports the open notes to an AI.
-
 #### `/cdx:sketch-diagram`
 
 Draws an animated, hand-drawn-style technical diagram: ink doodles on beige paper, wobbly rough.js strokes, faint watercolour regions, doodle icons, and dots flowing along the edges. Plans the layout from the content's shape and choreographs the flow so the motion retells the topic, previews frames and fixes issues, then delivers a self-contained HTML file and a seamlessly looping GIF. Fonts (OFL) and rough.js (MIT) are bundled; icons are drawn inline, nothing is fetched from the network.
@@ -87,10 +72,6 @@ Explains a topic, problem, solution, or ticket in the simplest possible terms, w
 #### `/cdx:wrap`
 
 Prepares for a context clear. Flags uncommitted or conversation-only work that would be lost, brings the repo's written plan file up to date if it keeps one (never creates one), and prints a single self-contained oneliner to paste into a fresh session to resume the next piece of work. Manually invoked, e.g. `/cdx:wrap` or `/cdx:wrap next: add tests`.
-
-### Supported Languages (setup wizard)
-
-Go, TypeScript/JavaScript, Python, Swift
 
 ## canon — Code Annotation Tool
 

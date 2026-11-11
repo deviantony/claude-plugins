@@ -15,20 +15,18 @@ Users add this marketplace with:
 
 This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.json` lists all available plugins. Each plugin lives in its own top-level directory with its own `.claude-plugin/plugin.json` manifest. Plugins expose skills (SKILL.md files) that become slash commands when installed.
 
-The cdx plugin has eleven skills:
-- `skills/setup/SKILL.md` → `/cdx:setup` — 7-step bootstrap wizard (CLAUDE.md check → stack detection → git init → LSP plugins → jscpd → update CLAUDE.md + language rules → summary). Supports Go, TypeScript/JavaScript, Python, Swift only.
+The cdx plugin has nine skills:
 - `skills/coderev/SKILL.md` → `/cdx:coderev` — pre-PR review, invoked proactively before opening a PR. A fresh-context reviewer subagent (brief in `references/reviewer.md`) reviews the branch against its base and returns evidence-backed findings; the main agent triages them on its own (fix / skip with reason / needs the user), commits fixes separately, verifies with the project's checks and reports. The reviewer uses `cdx:scan` when jscpd configs exist.
 - `skills/scan/SKILL.md` → `/cdx:scan` — runs jscpd against per-language `.jscpd-<key>.json` configs and reports structured duplication findings. Invoked by `cdx:coderev` and standalone.
 - `skills/safe-deps/SKILL.md` → `/cdx:safe-deps` — enforces pnpm/bun/uv with exact pinning, 10-day minimum release age, and disabled post-install scripts; bans npm/yarn/npx
 - `skills/web-security-audit/SKILL.md` → `/cdx:web-security-audit` — 7-phase web-app security audit (static + live), with per-class authorization gates and a timestamped output folder
 - `skills/dev-docs/SKILL.md` → `/cdx:dev-docs` — survey-plan-generate workflow that produces a `docs/generated/` markdown set with YAML frontmatter (`covers` globs + `scanned_at_commit`) for git-based drift detection on re-runs
 - `skills/html-report/SKILL.md` → `/cdx:html-report` — turns a discussion or set of findings into a single self-contained HTML report in the Portainer house style, starting from `assets/report-template.html` (no JS, inline CSS, CSS-only diagrams)
-- `skills/annotate-report/SKILL.md` → `/cdx:annotate-report` — post-processor that injects a PR-style review/comment layer into an existing house-style HTML report via `scripts/annotate.py`, producing a non-destructive `.annotated.html` copy
 - `skills/sketch-diagram/SKILL.md` → `/cdx:sketch-diagram` — animated hand-drawn-style technical diagram (ink on beige paper, rough.js wobble, watercolour regions, flowing dots) as one self-contained HTML file, exported to a seamlessly looping GIF. `scripts/build.ts` inlines the bundled fonts and vendor JS; `scripts/render.ts` freezes CSS animations frame by frame over the DevTools protocol and encodes with ffmpeg. Needs bun, ffmpeg and a headless Chrome; no npm dependencies
 - `skills/simple/SKILL.md` → `/cdx:simple` — plain-language explanation of a topic, problem, solution, or ticket, drawn from the conversation first and from tools (issue trackers, files) when context is missing; delivers a short gist first and offers two further levels of detail on request
 - `skills/wrap/SKILL.md` → `/cdx:wrap` — prepares for a context clear: flags uncommitted or conversation-only work, updates the repo's written plan file if one exists (never creates one), and prints a self-contained oneliner to resume the next piece of work in a fresh session
 
-Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live in `configs/`.
+Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live in `configs/` (e.g. `configs/jscpd/<key>.json`, copied by hand into a project as `.jscpd-<key>.json` for `cdx:scan`).
 
 ## Plugin Conventions
 
@@ -55,4 +53,3 @@ Reference data used by skills lives in `skills/<skill>/references/`. Helper scri
 
 - jscpd configs are per-language (`.jscpd-<lang>.json`) rather than a single config, to allow language-specific thresholds and ignore patterns
 - The coderev skill separates reviewer and author: the reviewer runs in a fresh context and gets only the goal and the user's explicit constraints, never the author's rationale, so it isn't swayed by the reasoning that produced the code. The author (main agent) knows the intent, so it triages, but it must back up skipping a high finding with concrete evidence. One reviewer by default; large diffs are split by area, never by category
-- Best practices come from `skills/setup/references/claude-md-practices.md`: the Generic section is written into the user's CLAUDE.md, while language-specific sections are written to path-scoped `.claude/rules/cdx-<lang>.md` files. To add support for a new language, add a `## <Language>` section (with a `Paths:` line) to this reference file.

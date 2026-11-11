@@ -4,14 +4,14 @@ description: |
   Runs jscpd against the project's per-language configs and reports structured
   duplication findings. Invoke during code review (cdx:coderev calls this for
   tool-backed reuse analysis), when checking for copy-paste duplication, or
-  before committing. Setup creates the configs (`.jscpd-<key>.json`); this
-  skill consumes them.
+  before committing. Reads `.jscpd-<key>.json` configs at the project root;
+  starter configs ship in `cdx/configs/jscpd/`.
 user-invocable: true
 ---
 
 # CDX Scan
 
-Deterministic duplication detection. Wraps `jscpd` against any `.jscpd-<key>.json` configs at the project root (created by `/cdx:setup`) and translates the output into a structured findings table.
+Deterministic duplication detection. Wraps `jscpd` against any `.jscpd-<key>.json` configs at the project root and translates the output into a structured findings table.
 
 Supported keys: `go`, `ts`, `python`, `swift`.
 
@@ -28,7 +28,7 @@ If invoked with a comma-separated list of changed file paths in `args`, store it
 
 If `CHANGED` is empty, run every config that exists.
 
-Glob the project root for `.jscpd-*.json`. If none match the in-scope keys, report `no jscpd configs found — run /cdx:setup first` and stop.
+Glob the project root for `.jscpd-*.json`. If none match the in-scope keys, report `no jscpd configs found — copy ${CLAUDE_PLUGIN_ROOT}/configs/jscpd/<key>.json to the project root as .jscpd-<key>.json` (with the real plugin path filled in) and stop.
 
 ### 2. Pre-checks
 
@@ -86,10 +86,10 @@ Sort: `high` before `medium`; within each priority, `in diff` before `pre-existi
 
 If no clones are found across all in-scope configs, output: `✓ No significant duplication detected across [N] config(s).`
 
-When invoked from `cdx:coderev`, the orchestrator will pull these findings and pass them to the Reuse review agent as tool-backed input.
+When invoked from the `cdx:coderev` reviewer, it reports the clones that this change introduced as reuse findings.
 
 ## Constraints
 
 - **Never** modify code — analysis only
-- **Never** edit jscpd configs to silence findings — configs are user-owned; if thresholds are off, the user adjusts them in `cdx/configs/jscpd/<key>.json` (during a re-run of `/cdx:setup`) or by hand
+- **Never** edit jscpd configs to silence findings — configs are user-owned; if thresholds are off, the user adjusts them by hand
 - **Never** dismiss a `pre-existing` finding without surfacing it — let the user decide what to act on
