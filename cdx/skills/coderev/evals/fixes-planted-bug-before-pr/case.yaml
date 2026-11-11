@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: fixes-planted-bug-before-pr
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Before opening the PR, an independent reviewer in a fresh context reviews the
+  branch against main. The off-by-one page count (25 items at size 10 gives 2
+  pages, losing the last 5) and the empty-slice panic are found and fixed, the
+  local clampInt is replaced by mathx.Clamp, go test passes, and the fixes land
+  in a separate "Address review findings" commit. The user gets a short report.

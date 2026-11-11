@@ -17,7 +17,7 @@ This is a **plugin marketplace monorepo**. The root `.claude-plugin/marketplace.
 
 The cdx plugin has eleven skills:
 - `skills/setup/SKILL.md` → `/cdx:setup` — 7-step bootstrap wizard (CLAUDE.md check → stack detection → git init → LSP plugins → jscpd → update CLAUDE.md + language rules → summary). Supports Go, TypeScript/JavaScript, Python, Swift only.
-- `skills/coderev/SKILL.md` → `/cdx:coderev` — comprehensive code review (3 parallel agents covering correctness, reuse/conventions, efficiency/security; structured report; offers to fix). Reuse agent is augmented by `cdx:scan` when jscpd configs exist.
+- `skills/coderev/SKILL.md` → `/cdx:coderev` — pre-PR review, invoked proactively before opening a PR. A fresh-context reviewer subagent (brief in `references/reviewer.md`) reviews the branch against its base and returns evidence-backed findings; the main agent triages them on its own (fix / skip with reason / needs the user), commits fixes separately, verifies with the project's checks and reports. The reviewer uses `cdx:scan` when jscpd configs exist.
 - `skills/scan/SKILL.md` → `/cdx:scan` — runs jscpd against per-language `.jscpd-<key>.json` configs and reports structured duplication findings. Invoked by `cdx:coderev` and standalone.
 - `skills/safe-deps/SKILL.md` → `/cdx:safe-deps` — enforces pnpm/bun/uv with exact pinning, 10-day minimum release age, and disabled post-install scripts; bans npm/yarn/npx
 - `skills/web-security-audit/SKILL.md` → `/cdx:web-security-audit` — 7-phase web-app security audit (static + live), with per-class authorization gates and a timestamped output folder
@@ -35,7 +35,7 @@ Reference data used by skills lives in `skills/<skill>/references/`. Helper scri
 - **Plugin manifest**: `.claude-plugin/plugin.json` with name, version, description, author
 - **Skill frontmatter**: YAML with `name`, `description` (include trigger phrases), `user-invocable: true`
 - **`${CLAUDE_PLUGIN_ROOT}`**: Resolved at runtime to the plugin's root directory; use this in skills to reference sibling files (e.g., reference tables, templates)
-- **Interactive by design**: Skills use AskUserQuestion to confirm decisions before taking action — never auto-apply destructive changes
+- **Interactive by design**: Skills use AskUserQuestion to confirm decisions before taking action — never auto-apply destructive changes. Exception: `coderev` applies its own review fixes without asking, as a separate commit the user can inspect or drop
 
 ## Adding a New Plugin
 
@@ -54,5 +54,5 @@ Reference data used by skills lives in `skills/<skill>/references/`. Helper scri
 ## Key Design Decisions
 
 - jscpd configs are per-language (`.jscpd-<lang>.json`) rather than a single config, to allow language-specific thresholds and ignore patterns
-- The coderev skill launches three review agents in parallel and reports findings read-only before offering to apply fixes — keeps audit and edit phases distinct so the user sees the full picture first
+- The coderev skill separates reviewer and author: the reviewer runs in a fresh context and gets only the goal and the user's explicit constraints, never the author's rationale, so it isn't swayed by the reasoning that produced the code. The author (main agent) knows the intent, so it triages, but it must back up skipping a high finding with concrete evidence. One reviewer by default; large diffs are split by area, never by category
 - Best practices come from `skills/setup/references/claude-md-practices.md`: the Generic section is written into the user's CLAUDE.md, while language-specific sections are written to path-scoped `.claude/rules/cdx-<lang>.md` files. To add support for a new language, add a `## <Language>` section (with a `Paths:` line) to this reference file.

@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: cross-file-option-not-wired
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  The review finds three defects that only show up across files or under load:
+  server.go never passes CacheMaxEntries to cache.New, so the setting has no
+  effect; with the default MaxEntries of 0 every existing caller's cache now
+  holds a single entry; and Len reads the map without the lock. All three are
+  fixed in a separate "Address review findings" commit, tests (including -race)
+  pass, and the agent proceeds to the PR.

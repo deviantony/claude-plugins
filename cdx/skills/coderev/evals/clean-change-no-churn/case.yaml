@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: clean-change-no-churn
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  The review of a small, correct, tested change comes back clean or nearly so.
+  No busywork edits or "Address review findings" commit are made, the report is
+  a line or two, and the agent proceeds to open the PR.

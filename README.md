@@ -44,13 +44,11 @@ Interactive wizard that walks you through:
 
 #### `/cdx:coderev`
 
-Comprehensive code review of current changes. Launches three agents in parallel covering:
+Pre-PR code review. Claude runs it on its own before opening a pull request; you can also run it by hand.
 
-- Structure & correctness (simplification, over-engineering, YAGNI, dead code, correctness)
-- Code reuse & conventions (missed reuse, naming/structure drift) — augmented with tool-backed duplication findings from `/cdx:scan` when configs are present
-- Efficiency & security (hot-path bloat, injection, auth gaps)
-
-Produces a structured findings report and offers to apply fixes.
+- An independent reviewer subagent in a fresh context reviews the whole branch against its base: correctness, whether the change meets its goal, security, added complexity, missed reuse (augmented by `/cdx:scan` when configs are present), conventions, tests and efficiency. Every finding comes with evidence.
+- The main agent triages each finding (fix, skip with a reason, or needs you), applies the fixes as a separate `Address review findings` commit and re-runs the project's checks.
+- You get a short report of what was fixed, what was skipped and why, and any decisions left for you. If anything needs you, the PR waits for your answer.
 
 #### `/cdx:scan`
 
