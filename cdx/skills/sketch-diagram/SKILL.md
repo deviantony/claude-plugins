@@ -17,7 +17,7 @@ Deliver a seamlessly looping GIF plus the self-contained HTML it was rendered fr
 Needs `bun`, `ffmpeg` and a headless Chrome; if `render.ts` cannot find one it prints
 the fix. Relay it to the user rather than installing anything.
 
-`SKILL=${CLAUDE_PLUGIN_ROOT}/skills/sketch-diagram`
+`$SKILL` in the commands below stands for the absolute path of this skill's directory (the folder that contains this `SKILL.md`). Shell variables don't persist between tool calls, so substitute the real path in each command (or prefix it with `SKILL=<path>`).
 
 ## 1. Pick the layout from the content's shape
 

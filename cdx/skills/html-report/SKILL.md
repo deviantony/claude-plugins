@@ -25,7 +25,7 @@ organizing for them. Match it; don't reinvent it.
 
 ## The template is the source of truth
 
-`${CLAUDE_PLUGIN_ROOT}/skills/html-report/assets/report-template.html` is a
+`assets/report-template.html`, in this skill's directory (the folder that contains this `SKILL.md`), is a
 self-contained kitchen-sink document: the full palette plus every component, each
 demonstrated once and labelled with an HTML comment. **Always start from it.**
 Copy it to the output path, then replace the `<main>` content with the real
@@ -35,7 +35,7 @@ Do not regenerate the CSS from memory and do not hand-tweak colors, fonts, or
 spacing — the whole value is that every report looks like it came from the same
 hand. The `:root` tokens are the Portainer design system; leave them alone.
 
-`${CLAUDE_PLUGIN_ROOT}/skills/html-report/references/components.md` is the index
+`references/components.md`, in the same directory, is the index
 of what each component is *for* — read it when you're unsure which component fits
 the material in front of you.
 
@@ -76,7 +76,7 @@ more than that stalls a flow whose whole point is "go produce the artifact."
 ## Building the report
 
 1. **Decide the spine** from the material (see
-   `${CLAUDE_PLUGIN_ROOT}/skills/html-report/references/components.md`). Most
+   `references/components.md`). Most
    reports open with a masthead, optionally a verdict band, then numbered
    sections, and close with a footnote. Let the content pick the components —
    a comparison wants a table and pros/cons cards; a review wants findings; a

@@ -41,7 +41,7 @@ Pre-PR code review. Claude runs it on its own before opening a pull request; you
 
 #### `/cdx:scan`
 
-Runs jscpd against the project's per-language `.jscpd-<key>.json` configs and reports structured copy-paste duplication findings. Invoked automatically by `/cdx:coderev` when configs exist; can also be run standalone. To enable it, copy a starter config from `cdx/configs/jscpd/<key>.json` (go, ts, python, swift) to your project root as `.jscpd-<key>.json`.
+Runs jscpd against the project's per-language `.jscpd-<key>.json` configs and reports structured copy-paste duplication findings. Invoked automatically by `/cdx:coderev` when configs exist; can also be run standalone. To enable it, copy a starter config from `cdx/skills/scan/configs/<key>.json` (go, ts, python, swift) to your project root as `.jscpd-<key>.json`.
 
 #### `/cdx:safe-deps`
 

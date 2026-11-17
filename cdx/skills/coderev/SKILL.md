@@ -31,8 +31,10 @@ Leave out everything else you know: alternatives you considered, why you structu
 
 Spawn one general-purpose subagent with this prompt:
 
+Replace `<skill dir>` with the absolute path of this skill's directory (the folder that contains this `SKILL.md`).
+
 ```
-Read ${CLAUDE_PLUGIN_ROOT}/skills/coderev/references/reviewer.md and follow it exactly.
+Read <skill dir>/references/reviewer.md and follow it exactly.
 
 Repository: <absolute repo path>
 Base ref: <base>

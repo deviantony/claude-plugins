@@ -5,7 +5,7 @@ description: |
   duplication findings. Invoke during code review (cdx:coderev calls this for
   tool-backed reuse analysis), when checking for copy-paste duplication, or
   before committing. Reads `.jscpd-<key>.json` configs at the project root;
-  starter configs ship in `cdx/configs/jscpd/`.
+  starter configs ship in this skill's `configs/` directory.
 user-invocable: true
 ---
 
@@ -28,7 +28,7 @@ If invoked with a comma-separated list of changed file paths in `args`, store it
 
 If `CHANGED` is empty, run every config that exists.
 
-Glob the project root for `.jscpd-*.json`. If none match the in-scope keys, report `no jscpd configs found — copy ${CLAUDE_PLUGIN_ROOT}/configs/jscpd/<key>.json to the project root as .jscpd-<key>.json` (with the real plugin path filled in) and stop.
+Glob the project root for `.jscpd-*.json`. If none match the in-scope keys, report `no jscpd configs found — copy <skill dir>/configs/<key>.json to the project root as .jscpd-<key>.json` and stop. Fill in `<skill dir>` with the absolute path of the folder that contains this `SKILL.md`.
 
 ### 2. Pre-checks
 

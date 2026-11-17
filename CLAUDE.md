@@ -26,13 +26,13 @@ The cdx plugin has nine skills:
 - `skills/simple/SKILL.md` → `/cdx:simple` — plain-language explanation of a topic, problem, solution, or ticket, drawn from the conversation first and from tools (issue trackers, files) when context is missing; delivers a short gist first and offers two further levels of detail on request
 - `skills/wrap/SKILL.md` → `/cdx:wrap` — prepares for a context clear: flags uncommitted or conversation-only work, updates the repo's written plan file if one exists (never creates one), and prints a self-contained oneliner to resume the next piece of work in a fresh session
 
-Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live in `configs/` (e.g. `configs/jscpd/<key>.json`, copied by hand into a project as `.jscpd-<key>.json` for `cdx:scan`).
+Reference data used by skills lives in `skills/<skill>/references/`. Helper scripts live in `skills/<skill>/scripts/`. Starter configs live with the skill that uses them (e.g. `skills/scan/configs/<key>.json`, copied by hand into a project as `.jscpd-<key>.json` for `cdx:scan`).
 
 ## Plugin Conventions
 
 - **Plugin manifest**: `.claude-plugin/plugin.json` with name, version, description, author
 - **Skill frontmatter**: YAML with `name`, `description` (include trigger phrases), `user-invocable: true`
-- **`${CLAUDE_PLUGIN_ROOT}`**: Resolved at runtime to the plugin's root directory; use this in skills to reference sibling files (e.g., reference tables, templates)
+- **Sibling files**: skills refer to their own files relative to the skill's directory (the folder containing its `SKILL.md`), never through `${CLAUDE_PLUGIN_ROOT}` or paths outside the skill. Skills are also installed as plain skills (OpenCode, Docker Sandboxes `sbx skills add`), where the plugin root doesn't exist, so each skill directory must be self-contained
 - **Interactive by design**: Skills use AskUserQuestion to confirm decisions before taking action — never auto-apply destructive changes. Exception: `coderev` applies its own review fixes without asking, as a separate commit the user can inspect or drop
 
 ## Adding a New Plugin
